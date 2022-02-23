@@ -23,9 +23,9 @@ class SecurityController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create($personSecurityInfo)
     {
-        //
+
     }
 
     /**
@@ -34,24 +34,31 @@ class SecurityController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request, $personSecurityInfo)
+    public function store(Request $request)
     {
         $person = new Person();
 
-        $person->first_name = $personSecurityInfo->first_name;
-        $person->last_name = $personSecurityInfo->last_name;
-        $person->middle_name = $personSecurityInfo->middle_name;
-        $person->email = $personSecurityInfo->email;
-        $person->primary_phone = $personSecurityInfo->primary_phone;
-        $person->secondary_phone = $personSecurityInfo->secondary_phone;
-
-        $person->security_info = new SecurityInfo();
-        $person->security_info->is_active = $personSecurityInfo->is_active;
-        $person->security_info->is_primary_user = $personSecurityInfo->is_primary_user;
-
+        $person->first_name = $request->input("first_name");
+        $person->last_name = $request->input("last_name");
+        $person->middle_name = $request->input("middle_name");
+        $person->email = $request->input("email");
+        $person->primary_phone = $request->input("primary_phone");
+        $person->secondary_phone = $request->input("secondary_phone");
+        $person->security_info_id = null;
         $person->save();
 
-        return $response()->json($person, 200);
+        $security_info = new SecurityInfo();
+        $security_info->person_id = $person->id;
+        $security_info->is_active = $request->input("is_active");
+        $security_info->is_primary = $request->input("is_primary");
+
+        $security_info->save();
+
+        $person->security_info_id = $security_info->id;
+        $person->update();
+        $person->security_info = $security_info;
+
+        return response()->json($person, 200);
     }
 
     /**
@@ -79,38 +86,38 @@ class SecurityController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $personSecurityInfo)
+    public function update(Request $request, $id)
     {
-      $person = Person::find($personSecurityInfo->id);
-      if($isset($person))
+      $person = Person::find($id);
+      if(isset($person))
       {
-        $person->first_name = $personSecurityInfo->first_name;
-        $person->last_name = $personSecurityInfo->last_name;
-        $person->middle_name = $personSecurityInfo->middle_name;
-        $person->email = $personSecurityInfo->email;
-        $person->primary_phone = $personSecurityInfo->primary_phone;
-        $person->secondary_phone = $personSecurityInfo->secondary_phone;
+        $person->first_name = $request->input("first_name");
+        $person->last_name = $request->input("last_name");
+        $person->middle_name = $request->input("middle_name");
+        $person->email = $request->input("email");
+        $person->primary_phone = $request->input("primary_phone");
+        $person->secondary_phone = $request->input("secondary_phone");
 
-        $securityInfo = $person->securityInfo;
+        $securityInfo = SecurityInfo::find($person->security_info_id);
         $canUpdate = true;
 
-        if($personSecurityInfo->is_primary_user == false)
+        if($request->input("is_primary") == false)
         {
           //Make sure that by setting this to false, we are not removing the last primary user from the database.
-          if($this->validateIsNotLastPrimaryUser($person->id) == false)
+          if($this->validateIsNotLastPrimaryUser($id) == false)
           {
             //Updating this will remove the last primary user. Return an error.
             $canUpdate = false;
           }
           else
           {
-            $securityInfo->is_primary_user = false;
+            $securityInfo->is_primary = false;
           }
         }
 
-        if($personSecurityInfo->is_active == false)
+        if($request->input("is_active") == false)
         {
-            if($this.validateIsnotLastActiveUser($personSecurityInfo->id) == false)
+            if($this->validateIsNotLastActiveUser($id) == false)
             {
               $canUpdate = false;
             }
@@ -125,6 +132,8 @@ class SecurityController extends Controller
           //Update the person and security info.
           $person->update();
           $securityInfo->update();
+
+          return response()->json($person, 200);
         }
         else
         {
@@ -142,16 +151,16 @@ class SecurityController extends Controller
     private function validateIsNotLastPrimaryUser($personId)
     {
       return DB::table("security_info")
-        ->where(["person_id", "<>", $personId],
-                ["is_primary_user", "=", true])
+        ->where("person_id", "<>", $personId)
+        ->where("is_primary", "=", true)
         ->count() > 0;
     }
 
-    private function validateIsnotLastActiveUser($personId)
+    private function validateIsNotLastActiveUser($personId)
     {
       return DB::table("security_info")
-        ->where(["person_id", "<>", $personId],
-                ["is_active", "=", true])
+        ->where("person_id", "<>", $personId)
+        ->where("is_active", "=", true)
         ->count() > 0;
     }
     /**
