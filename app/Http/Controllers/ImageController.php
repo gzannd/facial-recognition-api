@@ -20,9 +20,37 @@ class ImageController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function indexByDevice(Request $request, $deviceId)
     {
-        //
+      $limit = $request->query('limit', 10);
+
+      //Get all of the parent images. The query will automagically pull any related child images
+      //into the children property for each parent.
+      $result = \App\Models\Image::where('device_id', $deviceId)
+        ->with('detected_faces')
+        ->where('parent_id', null)
+        ->orderby('date_created_by_device', 'desc')
+        ->take($limit)
+        ->get();
+
+      return response()->json($result, 200);
+    }
+
+    public function indexByPerson(Request $request, $personId)
+    {
+      $limit = $request->query('limit', 10);
+
+      //Get all of the parent images whose children (if any) have a detected face associated with the specified person.
+      //The query will automagically pull any related child images into the children property for each parent.
+      $result = \App\Models\Image::where('parent_id', null)
+        ->with('detected_faces')
+          ->whereHas('detected_faces', function ($query) use ($personId) {
+                     $query->where('person_id', $personId);})
+        ->orderby('date_created_by_device', 'desc')
+        ->take($limit)
+        ->get();
+
+      return response()->json($result, 200);
     }
 
     /**
