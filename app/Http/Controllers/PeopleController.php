@@ -26,7 +26,7 @@ class PeopleController extends Controller
 
   public function update(Request $request, Person $person)
   {
-      $peson->update($request->all());
+      $person->update($request->all());
 
       return response()->json($person, 200);
   }

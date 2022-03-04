@@ -11,8 +11,6 @@ class ImageController extends Controller
     public function __construct(\App\Http\Services\StorageService $storageService)
     {
         $this->storageService = $storageService;
-
-        var_dump($this->storageService);
     }
 
     const STORAGE_ROOT = "images\\";
@@ -124,7 +122,6 @@ class ImageController extends Controller
           else
           {
             $fileName = $this->createImageFilename($image);
-            //$path = Storage::disk($this->storageLocation)->put($this::STORAGE_ROOT.$fileName, $decodedData);
             $image->file_path = $this::STORAGE_ROOT.$fileName;
             $image->description = "test image";
 
@@ -134,7 +131,8 @@ class ImageController extends Controller
 
           foreach($request->input("main_image")["face_images"] as $image)
           {
-              $croppedImage = $this->decodeBase64ImageData($image->data);
+              $croppedImage = new \App\Models\Image();
+              $croppedImageData = $this->decodeBase64ImageData($image->data);
               $croppedImage->date_created_by_device = date($image->date_created);
               $croppedImage->parent_id = $image->id;
               $croppedImage->device_id = $request->input("device_id");
@@ -143,8 +141,8 @@ class ImageController extends Controller
               }
 
               $fileName = $this->createImageFilename($croppedImage);
-              $path = Storage::disk($this->storageLocation)->put($this::STORAGE_ROOT.$fileName, $decodedData);
-              $croppedImage->file_path = $fileName;
+              $croppedImage->file_path = $this::STORAGE_ROOT.$fileName;
+              $this->storageService->write($croppedImage->file_path, $croppedImageData);
               $croppedImage->save();
           }
         }

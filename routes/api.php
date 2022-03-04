@@ -28,6 +28,13 @@ Route::post('person', 'App\Http\Controllers\SecurityController@store');
 Route::put('person/{person}', 'App\Http\Controllers\SecurityController@update');
 Route::delete('person/{person}', 'App\Http\Controllers\SecurityController@delete');
 
+//Device
+Route::get('device', 'App\Http\Controllers\DeviceController@index');
+Route::get('device/{device}', 'App\Http\Controllers\DeviceController@show');
+Route::post('device', 'App\Http\Controllers\DeviceController@store');
+Route::put('device/{device}', 'App\Http\Controllers\DeviceController@update');
+Route::delete('device/{device}', 'App\Http\Controllers\PersonController@delete');
+
 //Configuration
 Route::get('configuration', 'App\Http\Controllers\ConfigurationController@index');
 Route::put('configuration/{config}', 'App\Http\Controllers\ConfigurationController@update');
