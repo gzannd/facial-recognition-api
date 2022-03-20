@@ -8,9 +8,10 @@ use App\Models\Image;
 
 class ImageController extends Controller
 {
-    public function __construct(\App\Http\Services\StorageService $storageService)
+    public function __construct(\App\Http\Services\StorageService $storageService, \App\Http\Services\FacialRecognitionService $recognitionService)
     {
         $this->storageService = $storageService;
+        $this->recognitionService = $recognitionService;
     }
 
     const STORAGE_ROOT = "images\\";
@@ -55,12 +56,90 @@ class ImageController extends Controller
 
     /**
      * Show the form for creating a new resource.
-     *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create(Request $request)
     {
-        //
+      /*This method expects a javascript structure that conforms to this format:
+      {
+        "device_id":xxx,
+        "main_image":{
+          "data":Base64 encoded string,
+          "date_created":Date string
+        }
+      }
+      The base64 encoded image strings must contain the image MIME type.
+      */
+
+      $error = null;
+      $extension = null;
+
+      try
+      {
+        $imageData = $request->input("main_image")["data"];
+      }
+      catch(Exception $e)
+      {
+        $error = "Invalid input JSON.";
+      }
+
+      if($error == null)
+      {
+        //Get the extension.
+        try
+        {
+          $extension = explode('/', explode(':', substr($imageData, 0, strpos($imageData, ';')))[1])[1];
+        }
+        catch(Exception $e)
+        {
+          $error = "Missing image MIME type.";
+        }
+      }
+
+      if($error == null)
+      {
+        //Get the info for the main image.
+        $mainImageInfo = $this->getImageInfo($imageData);
+
+        //Create a new Image model and populate it.
+        $image = new \App\Models\Image();
+        $image->date_created_by_device = $this->convertDateTime($request->input("main_image")["date_created"]);
+        $image->device_id = $request->input("device_id");
+        $image->mime_type = $mainImageInfo->mime_type;
+        $image->data = $mainImageInfo->data;
+
+        echo("Sending image to recognition service");
+        //TEST: Send image to facial recognition service.
+        $imageRecognitionResponse = $this->recognitionService->ProcessImage($image);
+
+      //  echo($imageRecognitionResponse);
+
+        /*
+        //If all went well then we can store this image.
+        //Generate a filename for this image, then save it to the database .
+        $decodedData = $this->decodeBase64ImageData($request->input("main_image")["data"]);
+
+        if($decodedData == null)
+        {
+          //Image data isn't valid. Return an error.
+          $error = "Invalid image data.";
+        }
+        else
+        {
+          $fileName = $this->createImageFilename($image);
+          $image->file_path = $this::STORAGE_ROOT.$fileName;
+          $image->description = "";
+
+          $this->storageService->write($image->file_path, $decodedData);
+          $image->save();
+        }
+      }
+      else
+      {
+        echo($error);
+      }*/
+      }
     }
 
     /**
@@ -218,6 +297,7 @@ class ImageController extends Controller
     private function getImageInfo($base64Data)
     {
       $result = null;
+      $data = explode(',', $base64Data)[1];
       $binary = base64_decode(explode(',', $base64Data)[1]);
       $imageInfo = getimagesizefromstring($binary);
       if($imageInfo !== null)
@@ -226,6 +306,7 @@ class ImageController extends Controller
         $result->width = $imageInfo[0];
         $result->height = $imageInfo[1];
         $result->mime_type = $imageInfo["mime"];
+        $result->data = $data;
       }
 
       return $result;

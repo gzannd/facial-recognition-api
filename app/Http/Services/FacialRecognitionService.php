@@ -5,7 +5,7 @@ use GuzzleHttp\Client;
 class FacialRecognitionService
 {
   private $api_key = '49e7ade8-8128-4284-9976-564a893b663a';
-  private $service_url = 'http://localhost:8000/api/v1/detection/';
+  private $service_url = 'http://compreface-api:8080/api/v1/detection/detect/';
   private $timeout_in_seconds = 60.0;
 
   //Convert the JSON returned from the recognition service into a canonical data structure.
@@ -13,19 +13,16 @@ class FacialRecognitionService
   {
       $result = [];
 
-      if($data->result !== null)
+      foreach($data as $detectedFace)
       {
-        foreach($data->result as $detectedFace)
-        {
-            $detectionItem = new stdClass();
-            $detectionItem->hasMask = !($detectedFace->mask->value == "without_mask");
-            $detectionItem->top = $detectedFace->box->y_max;
-            $detectionItem->left = $detectedFace->box->x_min;
-            $detectionItem->width = $detectedFace->box->x_min + $detected_face->box->x_max;
-            $detectionItem->height = $detectedFace->box->y_max + $detectedFace->box_y_min;
+          $detectionItem = new \stdClass;
+          //$detectionItem->hasMask = !($detectedFace->mask->value == "without_mask");
+          $detectionItem->top = $detectedFace->box->y_max;
+          $detectionItem->left = $detectedFace->box->x_min;
+          $detectionItem->width = $detectedFace->box->x_min + $detectedFace->box->x_max;
+          $detectionItem->height = $detectedFace->box->y_max + $detectedFace->box->y_min;
 
-            $result[] = $detectionItem;
-        }
+          $result[] = $detectionItem;
       }
 
       return $result;
@@ -35,26 +32,30 @@ class FacialRecognitionService
   //Expects an Image model, which contains the base64 encoded image data and device information.
   public function ProcessImage($image)
   {
-    $headers = ['x-api-key' => $this->api_key, 'content-type' => "application/json"];
-
     $client = new Client([
-        'timeout'  => $this->timeout_in_seconds,
+        'timeout'  => 30,
     ]);
 
-    //Make sure the image actually contains data
-    if(isset($image->encodedData))
+
+    if(isset($image->data))
     {
-      $response = $client->request('POST', $this->service_url, $headers,
-        [
-          "d" => ["file" => $image->encodedData]
-        ]);
+      $response = $client->post($this->service_url, [
+        'headers' => [
+          'x-api-key' => $this->api_key,
+          'content-type' => 'application/json'
+        ],
+        'json' => ["file" => $image->data]
+      ]);
 
       if(isset($response))
       {
-          if($response->getStatusCode() == 200 && $response->getHeader("Content-Length")[0] > 0)
+          if($response->getStatusCode() == 200 )
           {
+
             //Assume a successful response. Grab the JSON from the body.
-            $body = $response->getBody();
+            $returnVal = json_decode($response->getBody());
+            $responseData = $this->ProcessResponse($returnVal->result);
+            var_dump($responseData);
 
             //Log the result and update the image database if necessary.
 

@@ -19,7 +19,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 //Image
-Route::post('image', "App\Http\Controllers\ImageController@store");
+Route::post('image', "App\Http\Controllers\ImageController@create");
 Route::get('image/device/{device}', "App\Http\Controllers\ImageController@indexByDevice");
 Route::get('image/person/{person}', "App\Http\Controllers\ImageController@indexByPerson");
 
