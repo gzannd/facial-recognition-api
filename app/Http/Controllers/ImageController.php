@@ -5,13 +5,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Image;
+use App\Interfaces\IFacialRecognitionService;
 
 class ImageController extends Controller
 {
-    public function __construct(\App\Http\Services\StorageService $storageService, \App\Http\Services\FacialRecognitionService $recognitionService)
+    public function __construct(
+      \App\Http\Services\StorageService $storageService,
+      IFacialRecognitionService $recognitionService)
     {
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
+        var_dump($this->recognitionService);
     }
 
     const STORAGE_ROOT = "images\\";
@@ -109,36 +113,9 @@ class ImageController extends Controller
         $image->mime_type = $mainImageInfo->mime_type;
         $image->data = $mainImageInfo->data;
 
-        echo("Sending image to recognition service");
-        //TEST: Send image to facial recognition service.
-        $imageRecognitionResponse = $this->recognitionService->ProcessImage($image);
+        //Kick off a facial recognition task.
 
-      //  echo($imageRecognitionResponse);
 
-        /*
-        //If all went well then we can store this image.
-        //Generate a filename for this image, then save it to the database .
-        $decodedData = $this->decodeBase64ImageData($request->input("main_image")["data"]);
-
-        if($decodedData == null)
-        {
-          //Image data isn't valid. Return an error.
-          $error = "Invalid image data.";
-        }
-        else
-        {
-          $fileName = $this->createImageFilename($image);
-          $image->file_path = $this::STORAGE_ROOT.$fileName;
-          $image->description = "";
-
-          $this->storageService->write($image->file_path, $decodedData);
-          $image->save();
-        }
-      }
-      else
-      {
-        echo($error);
-      }*/
       }
     }
 

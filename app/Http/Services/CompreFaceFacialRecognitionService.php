@@ -1,8 +1,9 @@
 <?php
 namespace App\Http\Services;
+use App\Interfaces\IFacialRecognitionService;
 use GuzzleHttp\Client;
 
-class FacialRecognitionService
+class CompreFaceFacialRecognitionService implements IFacialRecognitionService
 {
   private $api_key = '49e7ade8-8128-4284-9976-564a893b663a';
   private $service_url = 'http://compreface-api:8080/api/v1/detection/detect/';
@@ -16,11 +17,14 @@ class FacialRecognitionService
       foreach($data as $detectedFace)
       {
           $detectionItem = new \stdClass;
-          //$detectionItem->hasMask = !($detectedFace->mask->value == "without_mask");
+          if(isset($detectedFace->mask))
+          {
+            $detectionItem->hasMask = !($detectedFace->mask->value == "without_mask");
+          }
           $detectionItem->top = $detectedFace->box->y_max;
           $detectionItem->left = $detectedFace->box->x_min;
-          $detectionItem->width = $detectedFace->box->x_min + $detectedFace->box->x_max;
-          $detectionItem->height = $detectedFace->box->y_max + $detectedFace->box->y_min;
+          $detectionItem->width = $detectedFace->box->x_max - $detectedFace->box->x_min;
+          $detectionItem->height = $detectedFace->box->y_max - $detectedFace->box->y_min;
 
           $result[] = $detectionItem;
       }
@@ -51,14 +55,17 @@ class FacialRecognitionService
       {
           if($response->getStatusCode() == 200 )
           {
-
-            //Assume a successful response. Grab the JSON from the body.
+            //Grab the JSON from the body and parse it into a canonical data structure.
             $returnVal = json_decode($response->getBody());
             $responseData = $this->ProcessResponse($returnVal->result);
-            var_dump($responseData);
 
-            //Log the result and update the image database if necessary.
+            //Log the result.
 
+            return $responseData;
+          }
+          else
+          {
+            //Log the failure.
           }
       }
     }
