@@ -5,17 +5,19 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Image;
+use App\Http\Services\StorageService;
 use App\Interfaces\IFacialRecognitionService;
+use App\Jobs\SendImageToDetectionService;
+use App\Providers\FaceDetectionDidComplete;
 
 class ImageController extends Controller
 {
     public function __construct(
-      \App\Http\Services\StorageService $storageService,
+      StorageService $storageService,
       IFacialRecognitionService $recognitionService)
     {
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
-        var_dump($this->recognitionService);
     }
 
     const STORAGE_ROOT = "images\\";
@@ -86,6 +88,7 @@ class ImageController extends Controller
       catch(Exception $e)
       {
         $error = "Invalid input JSON.";
+        echo($error);
       }
 
       if($error == null)
@@ -103,19 +106,42 @@ class ImageController extends Controller
 
       if($error == null)
       {
-        //Get the info for the main image.
-        $mainImageInfo = $this->getImageInfo($imageData);
+        try
+        {
+          //Get the info for the main image.
+          $mainImageInfo = $this->getImageInfo($imageData);
 
-        //Create a new Image model and populate it.
-        $image = new \App\Models\Image();
-        $image->date_created_by_device = $this->convertDateTime($request->input("main_image")["date_created"]);
-        $image->device_id = $request->input("device_id");
-        $image->mime_type = $mainImageInfo->mime_type;
-        $image->data = $mainImageInfo->data;
+          //Create a new Image model and populate it.
+          $image = new \App\Models\Image();
+          $image->date_created_by_device = $this->convertDateTime($request->input("main_image")["date_created"]);
+          $image->device_id = $request->input("device_id");
+          $image->mime_type = $mainImageInfo->mime_type;
+          $image->description = null;
+          $image->data = null;
 
-        //Kick off a facial recognition task.
+          //Save the image to disk and note its filename.
+          $image->file_path = $this->createImageFilename($image);
 
+          //Save the raw image data to the file system.
+          $this->storageService->write(self::STORAGE_ROOT.$image->file_path, $mainImageInfo->data);
 
+          //Save the metadata to disk.
+          $image->save();
+
+          //Kick off a facial recognition task.
+          SendImageToDetectionService::dispatch($mainImageInfo->data, $image->id, $image->device_id);
+        }
+        catch(Excepton $e)
+        {
+          //Log the error and return a 500.
+          echo($e);
+
+          return response()->json("An internal server error has occurred", 500);
+        }
+      }
+      else
+      {
+        return response()->json("Bad request", 400);
       }
     }
 

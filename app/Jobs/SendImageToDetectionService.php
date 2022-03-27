@@ -8,6 +8,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Interfaces\IFacialRecognitionService;
+use App\Http\Services\StorageService;
+use App\Models\Image;
 
 class SendImageToDetectionService implements ShouldQueue
 {
@@ -17,17 +20,20 @@ class SendImageToDetectionService implements ShouldQueue
     *The imgae to be processed
     **@var App\Models\Image
     */
-    protected $image;
-
+    protected $imageData;
+    protected $deviceId;
+    protected $imageId;
 
     /**
      * Create a new job instance.
      *@param App\Models\Image $image
      * @return void
      */
-    public function __construct(Image $image)
+    public function __construct($imageData, $imageId, $deviceId)
     {
-        $this->image = $image;
+      $this->imageData = $imageData;
+      $this->deviceId = $deviceId;
+      $this->imageId = $imageId;
     }
 
     /**
@@ -35,8 +41,8 @@ class SendImageToDetectionService implements ShouldQueue
      *
      * @return void
      */
-    public function handle()
+    public function handle(IFacialRecognitionService $facialRecognitionService)
     {
-        //
+        var_dump($facialRecognitionService->ProcessImage($this->imageData, $this->imageId, $this->deviceId));
     }
 }

@@ -3,6 +3,6 @@ namespace App\Interfaces;
 
 interface IFacialRecognitionService
 {
-  public function ProcessImage($image);
+  public function ProcessImage($imageData, $deviceId, $imageId);
 }
 ?>
