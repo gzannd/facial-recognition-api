@@ -25,6 +25,6 @@ class FaceDetectionDidCompleteHandler
      */
     public function handle(FaceDetectionDidComplete $event)
     {
-
+        
     }
 }
