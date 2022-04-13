@@ -6,23 +6,25 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Image;
 use App\Models\SecurityEventLogMessage;
+use App\Models\ApplicationEventLogMessage;
+use App\Models\LogLevel;
 use App\Http\Services\StorageService;
 use App\Interfaces\IFacialRecognitionService;
 use App\Jobs\SendImageToDetectionService;
 use App\Providers\FaceDetectionDidComplete;
 use App\Utilities\ImageCropper;
-use App\Http\Services\SecurityEventLogService;
+use App\Http\Services\EventLogService;
 
 class ImageController extends Controller
 {
     public function __construct(
       StorageService $storageService,
       IFacialRecognitionService $recognitionService,
-      SecurityEventLogService $securityEventLogService)
+      EventLogService $eventLogService)
     {
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
-        $this->securityEventLogService = $securityEventLogService;
+        $this->eventLogService = $eventLogService;
     }
 
     const STORAGE_ROOT = "images\\";
@@ -134,8 +136,14 @@ class ImageController extends Controller
           //Save the metadata to disk.
           $image->save();
 
-          $logMessage = new SecurityEventLogMessage($image->deviceId, $image->date_created_by_device, "STATUS", "Sending raw image data to detection service.");
-          $this->securityEventLogService->Log($logMessage);
+          $securityLogMessage = new SecurityEventLogMessage($image->deviceId, $image->date_created_by_device, "STATUS", "Sending raw image data to detection service.");
+          $this->eventLogService->LogSecurityEvent($securityLogMessage);
+
+
+          $appLogMessage = new ApplicationEventLogMessage(LogLevel::Info, "Sending raw image data to detection service.");
+          $this->eventLogService->LogApplicationEvent($appLogMessage);
+
+
           //Kick off a facial recognition task.
           SendImageToDetectionService::dispatch($mainImageInfo->data, $image->id, $image->device_id);
         }
