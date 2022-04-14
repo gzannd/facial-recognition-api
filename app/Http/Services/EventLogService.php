@@ -14,32 +14,69 @@ class EventLogService
         $logMessage->save();
     }
 
-    public function LogApplicationEvent(LogLevel $level, string $message)
+    public function LogApplicationEvent(LogLevel $level, string $message, $data = null)
     {
-      switch($level)
+      if(isset($data) == false)
       {
-          case LogLevel::Alert:
-            Log::alert($message);
-            break;
-          case LogLevel::Critical:
-            Log::critical($message);
-            break;
-          case LogLevel::Error:
-            Log::error($message);
-            break;
-          case LogLevel::Warning:
-            Log::warning($message);
-            break;
-          case LogLevel::Info:
-            Log::info($message);
-            break;
-          case LogLevel::Debug:
-            Log::debug($message);
-            break;
-          default:
-            //Unknown log type. Log it as Info.
-            Log::info($message);
-            break;
+        switch($level)
+        {
+            case LogLevel::Alert:
+              Log::alert($message);
+              break;
+            case LogLevel::Critical:
+              Log::critical($message);
+              break;
+            case LogLevel::Error:
+              Log::error($message);
+              break;
+            case LogLevel::Warning:
+              Log::warning($message);
+              break;
+            case LogLevel::Info:
+              Log::info($message);
+              break;
+            case LogLevel::Debug:
+              Log::debug($message);
+              break;
+            default:
+              //Unknown log type. Log it as Info.
+              Log::info($message);
+              break;
+        }
+      }
+      else
+      {
+        $contextData = $data;
+        if(is_array($contextData) == false)
+        {
+          $contextData = [$data];
+        }
+
+        switch($level)
+        {
+            case LogLevel::Alert:
+              Log::alert($message, $contextData);
+              break;
+            case LogLevel::Critical:
+              Log::critical($message, $contextData);
+              break;
+            case LogLevel::Error:
+              Log::error($message, $contextData);
+              break;
+            case LogLevel::Warning:
+              Log::warning($message, $contextData);
+              break;
+            case LogLevel::Info:
+              Log::info($message, $contextData);
+              break;
+            case LogLevel::Debug:
+              Log::debug($message, $contextData);
+              break;
+            default:
+              //Unknown log type. Log it as Info.
+              Log::info($message, $contextData);
+              break;
+        }
       }
     }
 }

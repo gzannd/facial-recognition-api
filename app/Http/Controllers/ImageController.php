@@ -75,6 +75,8 @@ class ImageController extends Controller
      */
     public function create(Request $request)
     {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Request received", $request);
+
       /*This method expects a javascript structure that conforms to this format:
       {
         "device_id":xxx,
@@ -96,7 +98,8 @@ class ImageController extends Controller
       catch(Exception $e)
       {
         $error = "Invalid input JSON.";
-        echo($error);
+
+        return response()->json($error);
       }
 
       if($error == null)
@@ -135,9 +138,6 @@ class ImageController extends Controller
 
           //Save the metadata to disk.
           $image->save();
-
-          $this->eventLogService->LogSecurityEvent($image->deviceId, $image->date_created_by_device, "Info", "Sending raw image data to detection service.");
-          $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Sending raw image data to detection service.");
 
           //Kick off a facial recognition task.
           SendImageToDetectionService::dispatch($mainImageInfo->data, $image->id, $image->device_id);
