@@ -75,7 +75,7 @@ class ImageController extends Controller
      */
     public function create(Request $request)
     {
-      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Request received", $request);
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received");
 
       /*This method expects a javascript structure that conforms to this format:
       {
@@ -98,7 +98,7 @@ class ImageController extends Controller
       catch(Exception $e)
       {
         $error = "Invalid input JSON.";
-
+        $this->eventLogService->LogApplicationEvent(LogLevel::Error, $error, $request);
         return response()->json($error);
       }
 
@@ -112,6 +112,8 @@ class ImageController extends Controller
         catch(Exception $e)
         {
           $error = "Missing image MIME type.";
+          $this->eventLogService->LogApplicationEvent(LogLevel::Error, $error, $request);
+          return response()->json($error);
         }
       }
 
@@ -134,24 +136,27 @@ class ImageController extends Controller
           $image->file_path = $this->createImageFilename($image);
 
           //Save the raw image data to the file system.
+          $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image to file system.");
           $this->storageService->write(self::STORAGE_ROOT.$image->file_path, $mainImageInfo->data);
 
           //Save the metadata to disk.
+          $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image metadata to database.");
           $image->save();
 
           //Kick off a facial recognition task.
-          SendImageToDetectionService::dispatch($mainImageInfo->data, $image->id, $image->device_id);
+          $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Sending image to facial detection service.");
+          SendImageToDetectionService::dispatch($mainImageInfo->data, $image->id, $image->device_id, $this->eventLogService);
         }
-        catch(Excepton $e)
+        catch(Exception $e)
         {
           //Log the error and return a 500.
-          echo($e);
-
+          $this->eventLogService->LogApplicationEvent(LogLevel::Error, $e->getMessage());
           return response()->json("An internal server error has occurred", 500);
         }
       }
       else
       {
+        $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Bad request", $request);
         return response()->json("Bad request", 400);
       }
     }

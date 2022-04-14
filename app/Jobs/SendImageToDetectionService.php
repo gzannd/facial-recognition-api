@@ -10,7 +10,9 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Interfaces\IFacialRecognitionService;
 use App\Http\Services\StorageService;
+use App\Http\Services\EventLogService;
 use App\Models\Image;
+use App\Models\LogLevel;
 
 class SendImageToDetectionService implements ShouldQueue
 {
@@ -23,17 +25,19 @@ class SendImageToDetectionService implements ShouldQueue
     protected $imageData;
     protected $deviceId;
     protected $imageId;
+    protected $logService;
 
     /**
      * Create a new job instance.
      *@param App\Models\Image $image
      * @return void
      */
-    public function __construct($imageData, $imageId, $deviceId)
+    public function __construct($imageData, $imageId, $deviceId, $logService)
     {
       $this->imageData = $imageData;
       $this->deviceId = $deviceId;
       $this->imageId = $imageId;
+      $this->logService = $logService;
     }
 
     /**
@@ -43,6 +47,7 @@ class SendImageToDetectionService implements ShouldQueue
      */
     public function handle(IFacialRecognitionService $facialRecognitionService)
     {
-        var_dump($facialRecognitionService->ProcessImage($this->imageData, $this->imageId, $this->deviceId));
+        $this->logService->LogApplicationEvent(LogLevel::Debug, "SendImageToDetectionService.handle()");
+        $facialRecognitionService->ProcessImage($this->imageData, $this->imageId, $this->deviceId);
     }
 }
