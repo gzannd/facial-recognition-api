@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\Image;
+use App\Models\Device;
 use App\Models\SecurityEventLogMessage;
 use App\Models\ApplicationEventLogMessage;
 use App\Models\LogLevel;
@@ -73,8 +74,9 @@ class ImageController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function create(Request $request)
+    public function create(Request $request, $deviceId)
     {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Device Id ".$deviceId);
       $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received");
 
       /*This method expects a javascript structure that conforms to this format:
@@ -88,8 +90,17 @@ class ImageController extends Controller
       The base64 encoded image strings must contain the image MIME type.
       */
 
+
       $error = null;
       $extension = null;
+
+      //Check the device ID to make sure it's valid.
+      if($this->deviceIdExists($deviceId) == false)
+      {
+          $error = "Invalid device Id";
+          $this->eventLogService->LogApplicationEvent(LogLevel::Error, $error." ".$deviceId, $request);
+          return response()->json($error, 400);
+      }
 
       try
       {
@@ -127,7 +138,7 @@ class ImageController extends Controller
           //Create a new Image model and populate it.
           $image = new \App\Models\Image();
           $image->date_created_by_device = $this->convertDateTime($request->input("main_image")["date_created"]);
-          $image->device_id = $request->input("device_id");
+          $image->device_id = $deviceId;
           $image->mime_type = $mainImageInfo->mime_type;
           $image->description = null;
           $image->data = null;
@@ -278,6 +289,11 @@ class ImageController extends Controller
         }
     }
 
+    private function deviceIdExists($deviceId)
+    {
+      $device = Device::find($deviceId);
+      return $device != null;
+    }
 
     private function convertDateTime($dateTime)
     {
