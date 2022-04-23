@@ -28,7 +28,7 @@ class ImageController extends Controller
         $this->eventLogService = $eventLogService;
     }
 
-    const STORAGE_ROOT = "images\\";
+    const STORAGE_ROOT = "images\\processing\\";
 
     /**
      * Display a listing of the resource.
@@ -76,9 +76,6 @@ class ImageController extends Controller
      */
     public function create(Request $request, $deviceId)
     {
-      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Device Id ".$deviceId);
-      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received");
-
       /*This method expects a javascript structure that conforms to this format:
       {
         "device_id":xxx,
@@ -93,6 +90,10 @@ class ImageController extends Controller
 
       $error = null;
       $extension = null;
+
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received. Device ID ".$deviceId);
+
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Validating Device ID ".$deviceId, $request);
 
       //Check the device ID to make sure it's valid.
       if($this->deviceIdExists($deviceId) == false)

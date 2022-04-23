@@ -6,8 +6,8 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
-use App\Providers\FaceDetectionDidComplete;
-use App\Providers\FaceDetectionDidCompleteHandler;
+use App\Events\FaceDetectionDidComplete;
+use App\Events\FaceDetectionDidCompleteHandler;
 
 class EventServiceProvider extends ServiceProvider
 {

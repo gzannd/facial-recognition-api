@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Providers;
+namespace App\Events;
 
-use App\Providers\FaceDetectionDidFail;
+use App\Events\FaceDetectionDidFail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use App\Http\Services\EventLogService;
+use App\Models\LogLevel;
 
 class FaceDetectionDidFailHandler
 {
@@ -13,9 +15,9 @@ class FaceDetectionDidFailHandler
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(EventLogService $logService)
     {
-        //
+        $this->logService = $logService;
     }
 
     /**
@@ -27,6 +29,6 @@ class FaceDetectionDidFailHandler
     public function handle(FaceDetectionDidFail $event)
     {
         //The facial detection event failed. Log the reason.
-        
+
     }
 }

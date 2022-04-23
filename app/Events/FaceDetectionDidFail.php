@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers;
+namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -25,6 +25,7 @@ class FaceDetectionDidFail
      */
     public function __construct($imageId, $deviceId, $reason)
     {
+        $this->logService = $logService;
         $this->imageId = $imageId;
         $this->deviceId = $deviceId;
         $this->reason = $reason;

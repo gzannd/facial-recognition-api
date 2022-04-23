@@ -3,7 +3,8 @@
 namespace App\Http\Services;
 
 use App\Interfaces\IFacialRecognitionService;
-use App\Providers\FaceDetectionDidComplete;
+use App\Events\FaceDetectionDidComplete;
+use App\Events\FaceDetectionDidFail;
 use App\Http\Services\EventLogService;
 use App\Models\LogLevel;
 
