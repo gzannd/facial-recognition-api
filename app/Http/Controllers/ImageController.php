@@ -93,7 +93,7 @@ class ImageController extends Controller
 
       $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received. Device ID ".$deviceId);
 
-      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Validating Device ID ".$deviceId, $request);
+      //$this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Validating Device ID ".$deviceId, $request);
 
       //Check the device ID to make sure it's valid.
       if($this->deviceIdExists($deviceId) == false)

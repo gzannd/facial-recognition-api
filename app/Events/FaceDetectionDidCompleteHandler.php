@@ -9,10 +9,11 @@ use App\Http\Services\EventLogService;
 use App\Http\Services\StorageService;
 use App\Models\LogLevel;
 use App\Models\Image;
+use App\Events\FacialRecognitionGeometryCreated;
 
 class FaceDetectionDidCompleteHandler
 {
-    const STORAGE_ROOT = "images\\processed\\";
+    const STORAGE_ROOT = "images\\processing\\";
     /**
      * Create the event listener.
      *
@@ -42,21 +43,26 @@ class FaceDetectionDidCompleteHandler
       //Grab the image metadata from the database.
       $imageMetadata = \App\Models\Image::find($event->imageId);
 
-      //If the image exists then we can move it from processing/ to a subfolder in processed/, and write the geometry information into
-      //that subfolder as well.
+      //If the image exists then we can  write the geometry information into the images/processing folder.
       if($imageMetadata !== null)
       {
-        $this->logService->LogApplicationEvent(LogLevel::Info, "Writing image data to processed folder.");
+        $this->logService->LogApplicationEvent(LogLevel::Info, "Writing image data to processing folder.");
+
+        //Grab the file_path property from the image data and replace the extension with .json.
+        $filePath = explode(".", $imageMetadata->file_path)[0].".json";
 
         try
         {
-          $filePath = self::STORAGE_ROOT."\\".$event->imageId;
-          $this->storageService->write($filePath.".txt", $event->imageData);
-          $this->storageService->write($filePath.".json", json_encode($event->geometry));
+          //Write the file to storage.
+          $this->storageService->write(self::STORAGE_ROOT.$filePath, json_encode($event->geometry));
+
+          //Raise an event to signal that the image and geometry is ready for further processing.
+          $this->logService->LogApplicationEvent(LogLevel::Info, "Raising FacialRecognitionGeometryCreated event.");
+          event(new FacialRecognitionGeometryCreated($event->imageId));
         }
         catch(Exception $ex)
         {
-          $this->logService->LogApplicationEvent(LogLevel::Error, "Exception occurred while writing image and/or metadata to storage: ".$ex->message);
+          $this->logService->LogApplicationEvent(LogLevel::Error, "Exception occurred while writing image metadata to storage: ".$ex->message);
 
           //Raise an event to inform the system that something went wrong.
         }

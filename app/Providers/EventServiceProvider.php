@@ -8,6 +8,8 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 use Illuminate\Support\Facades\Event;
 use App\Events\FaceDetectionDidComplete;
 use App\Events\FaceDetectionDidCompleteHandler;
+use App\Events\FacialRecognitionGeometryCreated;
+use App\Listeners\GenerateCroppedFacialImages;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -24,6 +26,9 @@ class EventServiceProvider extends ServiceProvider
         FaceDetectionDidFail::class => [
           FaceDetectionDidFailHandler::class,
         ],
+        FacialRecognitionGeometryCreated::class => [
+          GenerateCroppedFacialImages::class,
+        ]
     ];
 
     /**
