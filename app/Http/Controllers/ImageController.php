@@ -47,11 +47,30 @@ class ImageController extends Controller
       $result = \App\Models\Image::where('device_id', $deviceId)
         ->with('detected_faces')
         ->where('parent_id', null)
-        ->orderby('date_created_by_device', 'desc')
-        ->take($limit)
+        ->orderBy('created_at', "DESC")
+        ->limit($limit)
         ->get();
 
       return response()->json($result, 200);
+    }
+
+    public function indexByImageId(Request $request, $imageId)
+    {
+        $imageMetadata = Image::find($imageId);
+
+        if($imageMetadata !== null)
+        {
+          //Load the image data from the file store and return it.
+          $base64 = $this->storageService->read($this::STORAGE_ROOT.$imageMetadata->file_path.".".$this->imageService->GetExtensionForMimeType($imageMetadata->mime_type));
+
+          return response(base64_decode($base64))
+            ->header('Content-Type', $imageMetadata->mime_type);
+        }
+        else
+        {
+          //Image wasn't found. Return a 404.
+          return response(null, 404);
+        }
     }
 
     public function indexByPerson(Request $request, $personId)

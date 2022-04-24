@@ -25,7 +25,7 @@ class CompreFaceFacialRecognitionService extends FacialRecognitionServiceBase
           {
             $detectionItem->hasMask = !($detectedFace->mask->value == "without_mask");
           }
-          $detectionItem->top = $detectedFace->box->y_max;
+          $detectionItem->top = $detectedFace->box->y_min;
           $detectionItem->left = $detectedFace->box->x_min;
           $detectionItem->width = $detectedFace->box->x_max - $detectedFace->box->x_min;
           $detectionItem->height = $detectedFace->box->y_max - $detectedFace->box->y_min;

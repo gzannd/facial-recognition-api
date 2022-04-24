@@ -126,7 +126,7 @@ class GenerateCroppedFacialImages
 
                   $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Generated ".count($geometryDTO)." cropped images.");
 
-                  //Notify the system that the cropped images are created and available.
+                  //Notify the system that the cropped images were successfully saved.
 
                 }
                 else
