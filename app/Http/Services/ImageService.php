@@ -4,6 +4,7 @@ namespace App\Http\Services;
 class ImageService
 {
 
+  //Encodes a GDImage to base64. 
   public function GdImageToBase64($image, $format="jpg")
   {
     if( in_array( $format, array( 'jpg', 'jpeg', 'png', 'gif' ) ) )
@@ -11,13 +12,13 @@ class ImageService
         ob_start();
         if( $format == 'jpg' || $format == 'jpeg' )
         {
-            imagejpeg( $gdImg );
+          imagejpeg( $image );
         } elseif( $format == 'png' )
         {
-            imagepng( $gdImg );
+            imagepng( $image );
         } elseif( $format == 'gif' )
         {
-            imagegif( $gdImg );
+            imagegif( $image );
         }
 
         $data = ob_get_contents();
@@ -39,7 +40,6 @@ class ImageService
 
     // Failure
     return null;
-    }
   }
 
   public function Crop($image, $top, $left, $width, $height)

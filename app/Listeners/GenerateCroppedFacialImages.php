@@ -61,61 +61,74 @@ class GenerateCroppedFacialImages
                 //For each geometry element, create a cropped image and save it to the file system, using the image ID as a base for the filename.
                 $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Generating ".count($geometryDTO)." cropped images.");
 
-                $imageIndex = 1;
-                foreach($geometryDTO as $croppedGeometry)
+                //The image data should be a base64 encoded string. Decode this string and deserialize it into a GDImage.
+                $image = imagecreatefromstring(base64_decode($imageData));
+                if($image !== FALSE)
                 {
-                  $image = imagecreatefromstring(base64_decode($imageData));
-                  if($image !== null)
+                  $imageIndex = 1;
+                  foreach($geometryDTO as $croppedGeometry)
                   {
-                    $croppedImage = $this->imageService->Crop($image, $croppedGeometry->top, $croppedGeometry->left, $croppedGeometry->width, $croppedGeometry->height );
-                    if($croppedImage !== null)
+                    try
                     {
-                        //Write the image to storage.
-                        $croppedImageBase64 = $imageService->GdImageToBase64($croppedImage);
-                        if($croppedImageBase64 !== null)
+                      if($image !== null)
+                      {
+                        $croppedImage = $this->imageService->Crop($image, $croppedGeometry->top, $croppedGeometry->left, $croppedGeometry->width, $croppedGeometry->height );
+                        if($croppedImage !== null)
                         {
-                          $this->storageService->write($this::STORAGE_ROOT.$fileName."_".$imageIndex.".jpeg", $croppedImageBase64);
+                            //Write the image to storage.
+                            $croppedImageBase64 = $this->imageService->GdImageToBase64($croppedImage);
+                            if($croppedImageBase64 !== null)
+                            {
+                              $this->storageService->write($this::STORAGE_ROOT.$fileName."_".$imageIndex.".jpeg", $croppedImageBase64);
+                            }
+                            else
+                            {
+                              //There was an issue converting the data.
+                              $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Error converting cropped image ".$imageIndex." to base64.", $croppedGeometry);
+                            }
                         }
                         else
                         {
-                          //There was an issue converting the data for some reason.
-                          $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Error generating cropped image.", $croppedGeometry);
-
+                          $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Error cropping image ".$imageIndex.".", $croppedGeometry);
                         }
+                      }
                     }
+                    catch(Exception $ex)
+                    {
+                      $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Exception occurred while cropping image ".$imageIndex.". ".$ex->message, $croppedGeometry);
+                    }
+
+                    $imageIndex = $imageIndex + 1;
                   }
 
-                  $imageIndex = $imageIndex + 1;
+                  $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Generated ".count($geometryDTO)." cropped images.");
+
+                  //Notify the system that the cropped images are created and available.
+
                 }
-
-                $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Generated ".count($geometryDTO)." cropped images.");
-
-                //Notify the system that the cropped images are created and available.
-
+                else
+                {
+                  $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Base image data is not a valid file format. Expecting a base64 encoded image.");
+                }
               }
               else
               {
-                //JSON is not valid.
-                $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Geometry JSON data must be an array.");
+                $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Detection geometry data at path ".$imageMetadata->file_path." is not valid. It must be a JSON array.");
               }
             }
             else
             {
-              $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Image data for image at path ".$imageMetadata->file_path." was not located in the file system.");
+              $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Base image data at path ".$imageMetadata->file_path." was not located in the file system.");
             }
           }
           else
           {
-            $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Detection geometry metadata for image at path ".$imageMetadata->file_path." was not located in the file system.");
+            $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Detection geometry data at path ".$imageMetadata->file_path." was not located in the file system.");
           }
         }
         else
         {
-
+          $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Base image metadata for image ID ".$event->imageId." was not found.");
         }
-
-        //For each geometry element, create a cropped image and save it to the file system, using the image ID as a base for the filename.
-
-        //Notify the system that the cropped images are created and available.
     }
 }
