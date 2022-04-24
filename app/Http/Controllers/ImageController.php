@@ -15,17 +15,20 @@ use App\Jobs\SendImageToDetectionService;
 use App\Providers\FaceDetectionDidComplete;
 use App\Utilities\ImageCropper;
 use App\Http\Services\EventLogService;
+use App\Http\Services\ImageService;
 
 class ImageController extends Controller
 {
     public function __construct(
       StorageService $storageService,
       IFacialRecognitionService $recognitionService,
-      EventLogService $eventLogService)
+      EventLogService $eventLogService,
+      ImageService $imageService)
     {
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
         $this->eventLogService = $eventLogService;
+        $this->imageService = $imageService;
     }
 
     const STORAGE_ROOT = "images\\processing\\";
@@ -149,7 +152,9 @@ class ImageController extends Controller
 
           //Save the raw image data to the file system.
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image to file system.");
-          $this->storageService->write(self::STORAGE_ROOT.$image->file_path, $mainImageInfo->data);
+          $extension = $this->imageService->GetExtensionForMimeType($mainImageInfo->mime_type);
+
+          $this->storageService->write(self::STORAGE_ROOT.$image->file_path.".".$extension, $mainImageInfo->data);
 
           //Save the metadata to disk.
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image metadata to database.");
@@ -318,7 +323,7 @@ class ImageController extends Controller
 
     private function createImageFilename($imageData)
     {
-        return uniqid().".".$this->getExtension($imageData->mime_type);
+        return uniqid();
     }
 
     private function decodeBase64ImageData($base64)

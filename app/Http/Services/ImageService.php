@@ -4,7 +4,7 @@ namespace App\Http\Services;
 class ImageService
 {
 
-  //Encodes a GDImage to base64. 
+  //Encodes a GDImage to base64.
   public function GdImageToBase64($image, $format="jpg")
   {
     if( in_array( $format, array( 'jpg', 'jpeg', 'png', 'gif' ) ) )
@@ -40,6 +40,14 @@ class ImageService
 
     // Failure
     return null;
+  }
+
+  public function GetExtensionForMimeType($mimeType)
+  {
+      static $extensions = array('image/jpeg' => 'jpeg',
+                          'image/png' => 'png');
+
+      return $extensions[strtolower($mimeType)];
   }
 
   public function Crop($image, $top, $left, $width, $height)

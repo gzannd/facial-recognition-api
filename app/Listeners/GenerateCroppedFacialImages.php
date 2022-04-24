@@ -66,6 +66,8 @@ class GenerateCroppedFacialImages
                 if($image !== FALSE)
                 {
                   $imageIndex = 1;
+
+                  //For each geometry item, crop it out of the base image and save it to the file system.
                   foreach($geometryDTO as $croppedGeometry)
                   {
                     try
@@ -79,7 +81,28 @@ class GenerateCroppedFacialImages
                             $croppedImageBase64 = $this->imageService->GdImageToBase64($croppedImage);
                             if($croppedImageBase64 !== null)
                             {
-                              $this->storageService->write($this::STORAGE_ROOT.$fileName."_".$imageIndex.".jpeg", $croppedImageBase64);
+                              $filePath = $fileName."_".$imageIndex;
+                              $extension = $this->imageService->GetExtensionForMimeType($imageMetadata->mime_type);
+
+                              $this->storageService->write($this::STORAGE_ROOT.$filePath.".".$extension, $croppedImageBase64);
+
+                              //Update the database.
+                              $croppedImageDTO = new \App\Models\Image();
+                              $croppedImageDTO->parent_id = $event->imageId;
+                              $croppedImageDTO->date_created_by_device = date('Y-m-d H:i:s');
+                              $croppedImageDTO->device_id = $imageMetadata->device_id;
+                              $croppedImageDTO->file_path = $filePath;
+                              $croppedImageDTO->mime_type = $imageMetadata->mime_type;
+
+                              $croppedImageDTO->top = $croppedGeometry->top;
+                              $croppedImageDTO->left = $croppedGeometry->left;
+                              $croppedImageDTO->width = $croppedGeometry->width;
+                              $croppedImageDTO->height = $croppedGeometry->height;
+                              $croppedImageDTO->description = "Cropped from primary image.";
+                              $croppedImageDTO->data = null;
+
+                              $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving cropped image metadata ".$imageIndex." to database.");
+                              $croppedImageDTO->save();
                             }
                             else
                             {
