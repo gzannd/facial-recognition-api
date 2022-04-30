@@ -15,20 +15,23 @@ use App\Jobs\SendImageToDetectionService;
 use App\Providers\FaceDetectionDidComplete;
 use App\Utilities\ImageCropper;
 use App\Http\Services\EventLogService;
+use App\Http\Services\ImageService;
 
 class ImageController extends Controller
 {
     public function __construct(
       StorageService $storageService,
       IFacialRecognitionService $recognitionService,
-      EventLogService $eventLogService)
+      EventLogService $eventLogService,
+      ImageService $imageService)
     {
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
         $this->eventLogService = $eventLogService;
+        $this->imageService = $imageService;
     }
 
-    const STORAGE_ROOT = "images\\";
+    const STORAGE_ROOT = "images\\processing\\";
 
     /**
      * Display a listing of the resource.
@@ -44,11 +47,30 @@ class ImageController extends Controller
       $result = \App\Models\Image::where('device_id', $deviceId)
         ->with('detected_faces')
         ->where('parent_id', null)
-        ->orderby('date_created_by_device', 'desc')
-        ->take($limit)
+        ->orderBy('created_at', "DESC")
+        ->limit($limit)
         ->get();
 
       return response()->json($result, 200);
+    }
+
+    public function indexByImageId(Request $request, $imageId)
+    {
+        $imageMetadata = Image::find($imageId);
+
+        if($imageMetadata !== null)
+        {
+          //Load the image data from the file store and return it.
+          $base64 = $this->storageService->read($this::STORAGE_ROOT.$imageMetadata->file_path.".".$this->imageService->GetExtensionForMimeType($imageMetadata->mime_type));
+
+          return response(base64_decode($base64))
+            ->header('Content-Type', $imageMetadata->mime_type);
+        }
+        else
+        {
+          //Image wasn't found. Return a 404.
+          return response(null, 404);
+        }
     }
 
     public function indexByPerson(Request $request, $personId)
@@ -93,7 +115,7 @@ class ImageController extends Controller
 
       $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Request received. Device ID ".$deviceId);
 
-      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Validating Device ID ".$deviceId, $request);
+      //$this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Validating Device ID ".$deviceId, $request);
 
       //Check the device ID to make sure it's valid.
       if($this->deviceIdExists($deviceId) == false)
@@ -149,7 +171,9 @@ class ImageController extends Controller
 
           //Save the raw image data to the file system.
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image to file system.");
-          $this->storageService->write(self::STORAGE_ROOT.$image->file_path, $mainImageInfo->data);
+          $extension = $this->imageService->GetExtensionForMimeType($mainImageInfo->mime_type);
+
+          $this->storageService->write(self::STORAGE_ROOT.$image->file_path.".".$extension, $mainImageInfo->data);
 
           //Save the metadata to disk.
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image metadata to database.");
@@ -318,7 +342,7 @@ class ImageController extends Controller
 
     private function createImageFilename($imageData)
     {
-        return uniqid().".".$this->getExtension($imageData->mime_type);
+        return uniqid();
     }
 
     private function decodeBase64ImageData($base64)

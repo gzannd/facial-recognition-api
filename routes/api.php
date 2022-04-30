@@ -25,6 +25,7 @@ Route::get('system/status', "App\Http\Controllers\SystemStatusController@getCurr
 Route::post('image/{device}', "App\Http\Controllers\ImageController@create");
 Route::get('image/device/{device}', "App\Http\Controllers\ImageController@indexByDevice");
 Route::get('image/person/{person}', "App\Http\Controllers\ImageController@indexByPerson");
+Route::get('image/{id}', "App\Http\Controllers\ImageController@indexByImageId");
 Route::post('image/crop', "App\Http\Controllers\ImageController@testCropImage");
 
 //Person
