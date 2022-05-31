@@ -9,6 +9,7 @@ use App\Models\Device;
 use App\Models\SecurityEventLogMessage;
 use App\Models\ApplicationEventLogMessage;
 use App\Models\LogLevel;
+use App\Models\ImageControllerConfiguration;
 use App\Http\Services\StorageService;
 use App\Interfaces\IFacialRecognitionService;
 use App\Jobs\SendImageToDetectionService;
@@ -16,6 +17,8 @@ use App\Providers\FaceDetectionDidComplete;
 use App\Utilities\ImageCropper;
 use App\Http\Services\EventLogService;
 use App\Http\Services\ImageService;
+use DateTime;
+use DateInterval;
 
 class ImageController extends Controller
 {
@@ -23,8 +26,10 @@ class ImageController extends Controller
       StorageService $storageService,
       IFacialRecognitionService $recognitionService,
       EventLogService $eventLogService,
-      ImageService $imageService)
+      ImageService $imageService,
+      ImageControllerConfiguration $configuration)
     {
+        $this->configuration = $configuration;
         $this->storageService = $storageService;
         $this->recognitionService = $recognitionService;
         $this->eventLogService = $eventLogService;
@@ -90,6 +95,58 @@ class ImageController extends Controller
       return response()->json($result, 200);
     }
 
+    public function indexLatest(Request $request)
+    {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Latest image request received", $request);
+
+      $asOfDate = $this->resolveAsOfDate($request->query('asof'));
+
+      //Get an index of the images generated for each device, from the as-of date until now.
+      $result = \App\Models\Image::where('created_at', '>', $asOfDate)
+      ->orderBy('device_id')
+      ->get()
+      ->map(function($image)
+          {
+            return collect($image->toArray())
+            ->only(["device_id", "id", "created_at"])
+            ->all();
+          });
+
+      return response()->json($result, 200);
+
+    }
+
+
+    /*Resolves the 'asOf' datetime passed to the indexLatest() method. If the datetime is valid, then it is used as-is,
+    else the current datetime minus the configured lookback time in minutes is used.*/
+    private function resolveAsOfDate($asOfDateString)
+    {
+      $asOfDate = null;
+
+      if($asOfDateString !== null)
+      {
+        $asOfDate = DateTime::createFromFormat('Y-m-d\TH:i:s+', $asOfDateString);
+      }
+
+      if($asOfDate == null || $asOfDate == false)
+      {
+        $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Invalid AsOfDate, subtracting ".$this->configuration->IMAGE_LOOKBACK_MINUTES." from current datetime.");
+
+        //If the date is not valid, use the configuration to set the date to some default value in the past.
+        $asOfDate = new DateTime();
+        $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Current datetime ", $asOfDate);
+
+        $asOfDate = $asOfDate->modify("-".$this->configuration->IMAGE_LOOKBACK_MINUTES." minutes");
+      }
+
+      return $asOfDate;
+    }
+
+    public function postRaw(Request $request)
+    {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Raw image request received", $request);
+      return response()->json($result, 200);
+    }
 
     /**
      * Show the form for creating a new resource.
