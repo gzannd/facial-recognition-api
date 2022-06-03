@@ -101,19 +101,28 @@ class ImageController extends Controller
 
       $asOfDate = $this->resolveAsOfDate($request->query('asof'));
 
-      //Get an index of the images generated for each device, from the as-of date until now.
-      $result = \App\Models\Image::where('created_at', '>', $asOfDate)
-      ->orderBy('device_id')
-      ->get()
-      ->map(function($image)
-          {
-            return collect($image->toArray())
-            ->only(["device_id", "id", "created_at"])
-            ->all();
-          });
+
+      //There is probably a much more efficient way to create this relationship, but this should work fine for a small number
+      //of devices. 
+      //Get all of the image devices.
+      $result = \App\Models\Device::where('type', '=', 1)
+      ->select(['id', 'name', 'description'])
+      ->get();
+
+      //For each device, retrieve the latest images.
+      foreach($result as $device)
+      {
+        $images = \App\Models\Image::where('device_id', '=', $device->id)
+        ->where('created_at', '>', $asOfDate)
+        ->orderBy('created_at', 'desc')
+        ->limit(10)
+        ->select(['id', 'created_at'])
+        ->get();
+
+         $device->images = $images;
+      }
 
       return response()->json($result, 200);
-
     }
 
 
