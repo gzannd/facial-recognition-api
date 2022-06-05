@@ -34,6 +34,7 @@ class ImageController extends Controller
         $this->recognitionService = $recognitionService;
         $this->eventLogService = $eventLogService;
         $this->imageService = $imageService;
+        $this->STORAGE_ROOT = config("globals.IMAGE_PROCESSING_STORAGE_ROOT");
     }
 
     const STORAGE_ROOT = "images\\processing\\";
@@ -61,20 +62,31 @@ class ImageController extends Controller
 
     public function indexByImageId(Request $request, $imageId)
     {
-        $imageMetadata = Image::find($imageId);
-
-        if($imageMetadata !== null)
+        try
         {
-          //Load the image data from the file store and return it.
-          $base64 = $this->storageService->read($this::STORAGE_ROOT.$imageMetadata->file_path.".".$this->imageService->GetExtensionForMimeType($imageMetadata->mime_type));
+          $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Attempting to retrieve image ID", $imageId);
 
-          return response(base64_decode($base64))
-            ->header('Content-Type', $imageMetadata->mime_type);
+          $imageData = $this->imageService->getImageById($imageId);
+
+          if($imageData !== null)
+          {
+            $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Retrieved data for image ID", $imageId);
+
+            return response(base64_decode($imageData->base64))
+              ->header('Content-Type', $imageData->mime_type);
+          }
+          else
+          {
+            //Image wasn't found. Return a 404.
+            $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "No data retrieved for image ID", $imageId);
+
+            return response(null, 404);
+          }
         }
-        else
+        catch(Exception $e)
         {
-          //Image wasn't found. Return a 404.
-          return response(null, 404);
+          $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Error occurred while attempting to retrieve metatdata for image ID".$imageId, $e);
+          return response("An error occurred while attempting to process your request.", 500);
         }
     }
 
@@ -103,7 +115,7 @@ class ImageController extends Controller
 
 
       //There is probably a much more efficient way to create this relationship, but this should work fine for a small number
-      //of devices. 
+      //of devices.
       //Get all of the image devices.
       $result = \App\Models\Device::where('type', '=', 1)
       ->select(['id', 'name', 'description'])
@@ -239,7 +251,7 @@ class ImageController extends Controller
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image to file system.");
           $extension = $this->imageService->GetExtensionForMimeType($mainImageInfo->mime_type);
 
-          $this->storageService->write(self::STORAGE_ROOT.$image->file_path.".".$extension, $mainImageInfo->data);
+          $this->storageService->write($this->STORAGE_ROOT.$image->file_path.".".$extension, $mainImageInfo->data);
 
           //Save the metadata to disk.
           $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image metadata to database.");
@@ -350,7 +362,7 @@ class ImageController extends Controller
           else
           {
             $fileName = $this->createImageFilename($image);
-            $image->file_path = $this::STORAGE_ROOT.$fileName;
+            $image->file_path = $this->STORAGE_ROOT.$fileName;
             $image->description = "test image";
 
             $this->storageService->write($image->file_path, $decodedData);
@@ -369,7 +381,7 @@ class ImageController extends Controller
               }
 
               $fileName = $this->createImageFilename($croppedImage);
-              $croppedImage->file_path = $this::STORAGE_ROOT.$fileName;
+              $croppedImage->file_path = $this->STORAGE_ROOT.$fileName;
               $this->storageService->write($croppedImage->file_path, $croppedImageData);
               $croppedImage->save();
           }
