@@ -146,6 +146,9 @@ class ImageController extends Controller
 
       if($asOfDateString !== null)
       {
+        $asOfDateString = urldecode($asOfDateString);
+        $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Decoded asofDateString", $asOfDateString);
+
         $asOfDate = DateTime::createFromFormat('Y-m-d\TH:i:s+', $asOfDateString);
       }
 
