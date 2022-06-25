@@ -71,9 +71,13 @@ class ImageController extends Controller
           if($imageData !== null)
           {
             $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Retrieved data for image ID", $imageId);
-
             return response(base64_decode($imageData->base64))
-              ->header('Content-Type', $imageData->mime_type);
+              ->header('Content-Type', $imageData->mime_type)
+              ->header('Content-Encoding', 'base64');
+
+              /*
+            return response(base64_decode($imageData->base64))
+              ->header('Content-Type', $imageData->mime_type);*/
           }
           else
           {
@@ -111,30 +115,18 @@ class ImageController extends Controller
     {
       $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Latest image request received", $request);
 
-      $asOfDate = $this->resolveAsOfDate($request->query('asof'));
-
-
-      //There is probably a much more efficient way to create this relationship, but this should work fine for a small number
-      //of devices.
-      //Get all of the image devices.
-      $result = \App\Models\Device::where('type', '=', 1)
-      ->select(['id', 'name', 'description'])
-      ->get();
-
-      //For each device, retrieve the latest images.
-      foreach($result as $device)
+      try
       {
-        $images = \App\Models\Image::where('device_id', '=', $device->id)
-        ->where('created_at', '>', $asOfDate)
-        ->orderBy('created_at', 'desc')
-        ->limit(10)
-        ->select(['id', 'created_at'])
-        ->get();
+        $asOfDate = $this->resolveAsOfDate($request->query('asof'));
+        $result = $this->imageService->getImagesAsOfDate($asOfDate);
 
-         $device->images = $images;
+        return response()->json($result, 200);
       }
-
-      return response()->json($result, 200);
+      catch(Exception $e)
+      {
+        $this->eventLogService->LogApplicationEvent(LogLevel::Error, "Error occurred while attempting to retrieve metatdata for images.", $e);
+        return response("An error occurred while attempting to process your request.", 500);
+      }
     }
 
 
@@ -147,8 +139,6 @@ class ImageController extends Controller
       if($asOfDateString !== null)
       {
         $asOfDateString = urldecode($asOfDateString);
-        $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Decoded asofDateString", $asOfDateString);
-
         $asOfDate = DateTime::createFromFormat('Y-m-d\TH:i:s+', $asOfDateString);
       }
 
