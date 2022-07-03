@@ -72,12 +72,7 @@ class ImageController extends Controller
           {
             $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Retrieved data for image ID", $imageId);
             return response(base64_decode($imageData->base64))
-              ->header('Content-Type', $imageData->mime_type)
-              ->header('Content-Encoding', 'base64');
-
-              /*
-            return response(base64_decode($imageData->base64))
-              ->header('Content-Type', $imageData->mime_type);*/
+              ->header('Content-Type', $imageData->mime_type);  
           }
           else
           {
