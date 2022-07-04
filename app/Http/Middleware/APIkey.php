@@ -17,6 +17,7 @@ class APIkey
     public function handle(Request $request, Closure $next)
     {
       $envKey = env("API_KEY");
+
       $requestKey = $request->header('x-api-key');
 
       if(strcmp($envKey, $requestKey) !== 0)

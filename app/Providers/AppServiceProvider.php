@@ -14,6 +14,7 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind('App\Interfaces\IFacialRecognitionService', 'App\Http\Services\CompreFaceFacialRecognitionService');
+        $this->app->bind('App\Interfaces\IDeviceService', 'App\Http\Services\DeviceService');
     }
 
     /**

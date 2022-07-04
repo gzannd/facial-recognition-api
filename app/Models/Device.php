@@ -10,4 +10,9 @@ class Device extends Model
     use HasFactory;
 
     protected $fillable = ["name", "description", "type", "system_id"];
+
+    public function event_data_type()
+    {
+        return $this->hasMany('App\Models\EventDataType');
+    }
 }
