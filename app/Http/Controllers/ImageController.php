@@ -72,7 +72,7 @@ class ImageController extends Controller
           {
             $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Retrieved data for image ID", $imageId);
             return response(base64_decode($imageData->base64))
-              ->header('Content-Type', $imageData->mime_type);  
+              ->header('Content-Type', $imageData->mime_type);
           }
           else
           {
@@ -386,30 +386,9 @@ class ImageController extends Controller
       return $device != null;
     }
 
-    private function convertDateTime($dateTime)
-    {
-      try
-      {
-        return date( 'Y-m-d H:i:s', strtotime(str_replace('-', '/', $dateTime)));
-      }
-      catch(Exception)
-      {
-        return null;
-      }
-    }
 
-    private function getExtension($mime_type)
-    {
-      $extensions = array('image/jpeg' => 'jpeg',
-                          'image/png' => 'png');
 
-      return $extensions[strtolower($mime_type)];
-    }
 
-    private function createImageFilename($imageData)
-    {
-        return uniqid();
-    }
 
     private function decodeBase64ImageData($base64)
     {
@@ -420,23 +399,7 @@ class ImageController extends Controller
       return $decoded;
     }
 
-    private function getImageInfo($base64Data)
-    {
-      $result = null;
-      $data = explode(',', $base64Data)[1];
-      $binary = base64_decode(explode(',', $base64Data)[1]);
-      $imageInfo = getimagesizefromstring($binary);
-      if($imageInfo !== null)
-      {
-        $result = new \stdClass();
-        $result->width = $imageInfo[0];
-        $result->height = $imageInfo[1];
-        $result->mime_type = $imageInfo["mime"];
-        $result->data = $data;
-      }
 
-      return $result;
-    }
 
     /**
      * Display the specified resource.

@@ -5,130 +5,87 @@ use App\Models\LogLevel;
 use App\Http\Services\EventLogService;
 use App\Http\Services\StorageService;
 use App\Models\Image;
+use App\Models\Device;
+use App\Http\Services\ImageUtilities;
+use App\Http\Services\DateUtilities;
+use App\Jobs\SendImageToDetectionService;
+use App\Listeners\RawImageDataReceivedListener;
 
-class ImageService
+class ImageService:RawImageDataReceivedListener
 {
   public function __construct(
     StorageService $storageService,
-    EventLogService $eventLogService,)
+    EventLogService $eventLogService,
+    ImageUtilities $imageUtilities,
+    DateUtilities $dateUtilities)
     {
+      $this->dateUtilities = $dateUtilities;
+      $this->imageUtilities = $imageUtilities;
       $this->storageService = $storageService;
       $this->eventLogService = $eventLogService;
       $this->STORAGE_ROOT = config('globals.IMAGE_PROCESSING_STORAGE_ROOT');
     }
 
-  public function getImagesAsOfDate($asOfDate)
-  {
-    //There is probably a much more efficient way to create this relationship, but this should work fine for a small number
-    //of devices.
-    //Get all of the image devices.
-    $result = \App\Models\Device::where('type', '=', 1)
-    ->select(['id', 'name', 'description'])
-    ->get();
-
-    //For each device, retrieve the latest images.
-    foreach($result as $device)
+    public function handle(RawImageDataReceivedEvent $event)
     {
-      $images = \App\Models\Image::where('device_id', '=', $device->id)
-      ->where('created_at', '>', $asOfDate)
-      ->orderBy('created_at', 'desc')
-      ->limit(10)
-      ->select(['id', 'created_at'])
-      ->get();
-
-       //Insert some mock image data here.
-       $image = new Image();
-       $image->id = 181;
-       $image->created_at = $asOfDate;
-
-       $images[] = $image;
-
-       $device->images = $images;
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Image service received raw image data event.", $event);
     }
 
-    return $result;
-  }
-
-  public function GetImageById($imageId)
-  {
-    $base64 = null;
-
-    $imageMetadata = Image::find($imageId);
-
-    if($imageMetadata !== null)
+    public void processImageData($deviceId, $dateCreated, $mimeType, $description, $imageData)
     {
-      $base64 = $this->storageService->read($this->STORAGE_ROOT.$imageMetadata->file_path.".".$this->GetExtensionForMimeType($imageMetadata->mime_type));
+      //Create a new Image model and populate it.
+      $image = new \App\Models\Image();
+      $image->date_created_by_device = $this->convertDateTime($dateCreated);
+      $image->device_id = $deviceId;
+      $image->mime_type = $mime_type;
+      $image->description = null;
+      $image->data = null;
+
+      //Save the image to disk and note its filename.
+      $image->file_path = $this->createImageFilename($image);
+
+      //Save the raw image data to the file system.
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image to file system.");
+      $extension = $this->imageService->GetExtensionForMimeType($mime_type);
+
+      $this->storageService->write($this->STORAGE_ROOT.$image->file_path.".".$extension, $imageData);
+
+      //Save the metadata to disk.
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Saving image metadata to database.");
+      $image->save();
+
+      //Kick off a facial recognition task.
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Sending image to facial detection service.");
+      SendImageToDetectionService::dispatch($imageData, $image->id, $image->device_id, $this->eventLogService);
+
+      return $image;
     }
 
-    if($base64 !== null)
+
+
+    private function createImageFilename($imageData)
     {
-      $imageMetadata->base64 = $base64;
-      return $imageMetadata;
-    }
-    else
-    {
-      return null;
-    }
-  }
-
-  //Encodes a GDImage to base64.
-  public function GdImageToBase64($image, $format="jpg")
-  {
-    if( in_array( $format, array( 'jpg', 'jpeg', 'png', 'gif' ) ) )
-    {
-        ob_start();
-        if( $format == 'jpg' || $format == 'jpeg' )
-        {
-          imagejpeg( $image );
-        } elseif( $format == 'png' )
-        {
-            imagepng( $image );
-        } elseif( $format == 'gif' )
-        {
-            imagegif( $image );
-        }
-
-        $data = ob_get_contents();
-        ob_end_clean();
-
-        // Check for gd errors / buffer errors
-        if( !empty( $data ) )
-        {
-          $data = base64_encode( $data );
-
-          // Check for base64 errors
-          if ( $data !== false )
-          {
-            // Success
-            return $data;
-          }
-        }
+        return uniqid();
     }
 
-    // Failure
-    return null;
-  }
-
-  public function GetExtensionForMimeType($mimeType)
-  {
-      static $extensions = array('image/jpeg' => 'jpeg',
-                          'image/png' => 'png');
-
-      return $extensions[strtolower($mimeType)];
-  }
-
-  public function Crop($image, $top, $left, $width, $height)
-  {
-    $result = imagecrop($image, ['x' => $left, 'y' => $top, 'width' => $width, 'height' => $height]);
-
-    if($result !== FALSE)
+    private function getImageInfo($base64Data)
     {
+      $result = null;
+      $data = explode(',', $base64Data)[1];
+      $binary = base64_decode(explode(',', $base64Data)[1]);
+      $imageInfo = getimagesizefromstring($binary);
+      if($imageInfo !== null)
+      {
+        $result = new \stdClass();
+        $result->width = $imageInfo[0];
+        $result->height = $imageInfo[1];
+        $result->mime_type = $imageInfo["mime"];
+        $result->data = $data;
+      }
+
       return $result;
     }
-    else
-    {
-      return null;
-    }
-  }
 }
-?>
+
+
+ ?>

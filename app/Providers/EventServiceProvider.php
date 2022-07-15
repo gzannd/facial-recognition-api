@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Event;
 use App\Events\FaceDetectionDidComplete;
 use App\Events\FaceDetectionDidCompleteHandler;
 use App\Events\FacialRecognitionGeometryCreated;
+
 use App\Listeners\GenerateCroppedFacialImages;
 
 class EventServiceProvider extends ServiceProvider
@@ -20,6 +21,9 @@ class EventServiceProvider extends ServiceProvider
      */
 
     protected $listen = [
+        RawImageDataReceivedEvent::class => [
+          ImageService::class,
+        ],
         FaceDetectionDidComplete::class => [
           FaceDetectionDidCompleteHandler::class,
         ],

@@ -21,6 +21,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //System status
 Route::get('system/status', "App\Http\Controllers\SystemStatusController@getCurrentSystemStatus");
 
+//Event
+Route::post('event/{device}', "App\Http\Controllers\EventController@postEvent");
+
 //Image
 Route::post('image', "App\Http\Controllers\ImageController@postRaw");
 Route::post('image/{device}', "App\Http\Controllers\ImageController@create");
