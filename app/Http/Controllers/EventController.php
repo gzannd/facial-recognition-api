@@ -11,6 +11,7 @@ use App\Http\Services\StorageService;
 use App\Http\Services\EventLogService;
 use App\Interfaces\IDeviceService;
 use App\Http\Services\EventDataDispatchService;
+use App\Http\Factories\EventDataFactory;
 
 class EventController extends Controller
 {
@@ -18,7 +19,8 @@ class EventController extends Controller
     StorageService $storageService,
     EventLogService $eventLogService,
     IDeviceService $deviceService,
-    EventDataDispatchService $eventDispatchService
+    EventDataDispatchService $eventDispatchService,
+    EventDataFactory $eventDataFactory
     )
   {
       $this->storageService = $storageService;
@@ -51,10 +53,13 @@ class EventController extends Controller
       return response("Invalid event data type", 400);
     }
 
+    //Create a new EventData object and populate it with the necessary information
+    $eventData = new EventData($device, $request);
+
     $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Calling event dispatch service for ", $eventDataType);
 
     //Dispatch the event to the appropriate service class for further processing.
-    $this->eventDispatchService->dispatch($eventDataType, null);
+    $this->eventDispatchService->dispatch($eventData);
 
     return response("OK", 200);
   }
