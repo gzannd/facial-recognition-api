@@ -53,14 +53,22 @@ class EventController extends Controller
       return response("Invalid event data type", 400);
     }
 
-    //Create a new EventData object and populate it with the necessary information
-    $eventData = new EventData($device, $request);
+    $eventData = null;
+    try
+    {
+      //Create a new EventData object and populate it with the necessary information
+      $eventData = $this->eventDataFactory->CreateEventData($device, $request, $eventDataType);
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Calling event dispatch service for ", $eventDataType);
 
-    $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Calling event dispatch service for ", $eventDataType);
-
-    //Dispatch the event to the appropriate service class for further processing.
-    $this->eventDispatchService->dispatch($eventData);
-
-    return response("OK", 200);
+      //Dispatch the event to the appropriate service class for further processing.
+      $eventData->dispatch();
+      
+      return response("OK", 200);
+    }
+    catch(Exception $error)
+    {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Error, "An error occurred while attempting to create event data for event type ".$eventDataType, $error);
+      return response("Internal Server Error", 500);
+    }
   }
 }
