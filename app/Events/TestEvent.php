@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class RawImageDataReceivedEvent
+class TestEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -19,13 +19,18 @@ class RawImageDataReceivedEvent
      *
      * @return void
      */
-
-
-    public function __construct($device, $eventType, $imageData, $dateCreated)
+    public function __construct()
     {
-      $this->device = $device;
-      $this->eventType = $eventType;
-      $this->imageData = $imageData;
-      $this->dateCreated = $dateCreated;
+        //
+    }
+
+    /**
+     * Get the channels the event should broadcast on.
+     *
+     * @return \Illuminate\Broadcasting\Channel|array
+     */
+    public function broadcastOn()
+    {
+        return new PrivateChannel('channel-name');
     }
 }

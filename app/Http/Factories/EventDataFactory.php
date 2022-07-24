@@ -1,16 +1,28 @@
-<?
+<?php
+namespace App\Http\Factories;
 use Illuminate\Http\Request;
 use App\Models\Device;
+use App\Models\EventData;
+use App\Models\ApplicationEventLogMessage;
+use App\Models\LogLevel;
+use App\Http\Services\EventLogService;
+use App\Events\RawImageDataReceivedEvent;
 
 class EventDataFactory
 {
+  public function __construct(EventLogService $eventLogService)
+  {
+    $this->eventLogService = $eventLogService;
+  }
+
   public function CreateEventData(Device $device, Request $request, string $requestType)
   {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Creating event data for type ".$requestType);
       switch($requestType)
       {
         case "SECURITY_CAMERA_IMAGE":
         {
-            return CreateSecurityCameraImageEventData($device, $request);
+            return $this->CreateSecurityCameraImageEventData($device, $request);
         }
 
         default:
@@ -33,7 +45,7 @@ class EventDataFactory
 
       if($imageData != null && $dateCreated != null)
       {
-        $eventData = new EventData($device, "SECURITY_CAMERA_IMAGE", $imageData, $dateCreated);
+        $eventData = new RawImageDataReceivedEvent($device, "SECURITY_CAMERA_IMAGE", $imageData, $dateCreated);
       }
       else
       {

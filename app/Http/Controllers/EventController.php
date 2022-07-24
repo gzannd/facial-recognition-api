@@ -7,11 +7,14 @@ use App\Models\Device;
 use App\Models\SecurityEventLogMessage;
 use App\Models\ApplicationEventLogMessage;
 use App\Models\LogLevel;
-use App\Http\Services\StorageService;
 use App\Http\Services\EventLogService;
+use App\Http\Services\StorageService;
+
 use App\Interfaces\IDeviceService;
 use App\Http\Services\EventDataDispatchService;
 use App\Http\Factories\EventDataFactory;
+use App\Events\RawImageDataReceivedEvent;
+use App\Events\TestEvent;
 
 class EventController extends Controller
 {
@@ -27,6 +30,7 @@ class EventController extends Controller
       $this->eventLogService = $eventLogService;
       $this->deviceService = $deviceService;
       $this->eventDispatchService = $eventDispatchService;
+      $this->eventDataFactory = $eventDataFactory;
   }
 
   public function postEvent(Request $request, $deviceId)
@@ -61,8 +65,8 @@ class EventController extends Controller
       $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Calling event dispatch service for ", $eventDataType);
 
       //Dispatch the event to the appropriate service class for further processing.
-      $eventData->dispatch();
-      
+      $this->eventDispatchService->dispatch($eventData);
+
       return response("OK", 200);
     }
     catch(Exception $error)

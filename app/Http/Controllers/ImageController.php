@@ -193,7 +193,7 @@ class ImageController extends Controller
 
       try
       {
-        $imageData = $request->input("main_image")["data"];
+        $imageData = $request->input("data");
       }
       catch(Exception $e)
       {

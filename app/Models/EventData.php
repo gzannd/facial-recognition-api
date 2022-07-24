@@ -1,4 +1,4 @@
-<?
+<?php
 
 namespace App\Models;
 
@@ -11,13 +11,13 @@ class EventData extends Model
 {
     use HasFactory;
 
-    protected $table "eventdata";
+    protected $table = "eventdata";
     protected $fillable = ["device_id", "data_type", "date_created_by_device"];
 
-    public readonly $device;
-    public readonly $data;
-    public readonly $eventType;
-    public readonly $timeStamp;
+    public $device;
+    public $data;
+    public $eventType;
+    public $timeStamp;
 
     public function __construct(Device $device, string $eventType, $data, $timeStamp)
     {
@@ -27,3 +27,4 @@ class EventData extends Model
         $this->timeStamp = $timeStamp;
     }
 }
+?>

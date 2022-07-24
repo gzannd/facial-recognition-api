@@ -8,23 +8,15 @@ use App\Events\RawImageDataReceivedEvent;
 
 class EventDataDispatchService
 {
-
   public function __construct(EventLogService $eventLogService)
   {
     $this->eventLogService = $eventLogService;
   }
 
     //Dispatch an event to the appropriate service.
-    public function dispatch($eventType, $data)
+    public function dispatch($data)
     {
-      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Dispatching event ".$eventType, $data);
-
-      switch($eventType)
-      {
-        case "SECURITY_CAMERA_IMAGE":
-          RawImageDataReceivedEvent::dispatch($data, $eventType);
-          $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Event ".$eventType." dispatched.");
-          break;
-      }
+      event(new RawImageDataReceivedEvent($data->device, $data->eventType, $data->imageData, $data->dateCreated));
+      $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Event dispatched.");
     }
 }
