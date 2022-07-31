@@ -29,6 +29,6 @@ class FaceDetectionDidFailHandler
     public function handle(FaceDetectionDidFail $event)
     {
         //The facial detection event failed. Log the reason.
-
+        $this->logService->LogApplicationEvent(LogLevel::Error, "Face detection failure", $event);
     }
 }

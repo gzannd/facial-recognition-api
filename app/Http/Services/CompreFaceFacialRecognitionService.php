@@ -15,7 +15,6 @@ class CompreFaceFacialRecognitionService extends FacialRecognitionServiceBase
   //Convert the JSON returned from the recognition service into a canonical data structure.
   private function ProcessResponse($data)
   {
-    //  $this->logService->LogApplicationEvent(LogLevel:Info, "In CompreFaceFacialRecognitionService.ProcessResponse");
       $result = [];
 
       foreach($data as $detectedFace)
@@ -32,8 +31,6 @@ class CompreFaceFacialRecognitionService extends FacialRecognitionServiceBase
 
           $result[] = $detectionItem;
       }
-
-      //$this->logService->LogApplicationEvent(LogLevel:Info, "CompreFaceFacialRecognitionService.ProcessResponse result", $result);
 
       return $result;
   }
@@ -52,15 +49,25 @@ class CompreFaceFacialRecognitionService extends FacialRecognitionServiceBase
     {
       $this->logService->LogApplicationEvent(LogLevel::Info, "Calling CompreFace service at ".$this->service_url);
 
-      $response = $client->post($this->service_url, [
-        'headers' => [
-          'x-api-key' => $this->api_key,
-          'content-type' => 'application/json'
-        ],
-        'json' => ["file" => $imageData]
-      ]);
+      $response = null;
+      $failed = false;
 
-      if(isset($response))
+      try {
+        $response = $client->post($this->service_url, [
+          'headers' => [
+            'x-api-key' => $this->api_key,
+            'content-type' => 'application/json'
+          ],
+          'json' => ["file" => $imageData]
+        ]);
+      } catch (\Exception $e) {
+
+        $this->logService->LogApplicationEvent(LogLevel::Error, "Error occurred while attempting to call Compreface API at ".$this->service_url, $e);
+        $this->Fail($imageId, $deviceId, "Unable to contact CompreFace API. The component may be down or not responding.");
+        $failed = true;
+      }
+
+      if($response != null)
       {
           $this->logService->LogApplicationEvent(LogLevel::Info, "Received response", $response);
 
@@ -81,13 +88,15 @@ class CompreFaceFacialRecognitionService extends FacialRecognitionServiceBase
           else
           {
             $this->Fail($imageId, $deviceId, "Facial detection service returned a status code of ".$response->getStatusCode());
-            return null;
           }
       }
       else
       {
-        $this->Fail($imageId, $deviceId, "Facial detection service did not return a response.");
-        return null;
+        //If we didn't fail for some other reason, then we didn't get a response from the server.
+        if($failed == false)
+        {
+          $this->Fail($imageId, $deviceId, "Facial detection service did not return a response.");
+        }
       }
     }
   }

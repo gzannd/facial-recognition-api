@@ -25,7 +25,6 @@ class FaceDetectionDidFail
      */
     public function __construct($imageId, $deviceId, $reason)
     {
-        $this->logService = $logService;
         $this->imageId = $imageId;
         $this->deviceId = $deviceId;
         $this->reason = $reason;

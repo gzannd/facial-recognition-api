@@ -8,6 +8,8 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 use Illuminate\Support\Facades\Event;
 use App\Events\FaceDetectionDidComplete;
 use App\Events\FaceDetectionDidCompleteHandler;
+use App\Events\FaceDetectionDidFail;
+use App\Events\FaceDetectionDidFailHandler;
 use App\Events\FacialRecognitionGeometryCreated;
 use App\Events\RawImageDataReceivedEvent;
 use App\Http\Services\ImageService;
