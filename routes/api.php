@@ -21,6 +21,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //System status
 Route::get('system/status', "App\Http\Controllers\SystemStatusController@getCurrentSystemStatus");
 
+//Notifications
+Route::post('notification/{userId}', "App\Http\Controllers\PushNotificationsController@sendNotificationToUser");
+Route::patch('/fcm-token', "App\Http\Controllers\PushNotificationsController@updateToken");
+
 //Event
 Route::post('event/{device}', "App\Http\Controllers\EventController@postEvent");
 
