@@ -52,6 +52,14 @@ class ImageService
       }
     }
 
+    public function getImageById($imageId)
+    {
+      $this->eventLogService->LogApplicationEvent(LogLevel::Info, "Attempting to retrieve image ID ".$imageId."...");
+      $image = $this->imageUtilities->GetImageById($imageId);
+
+      return $image;
+    }
+
     public function processImageData($deviceId, $dateCreated, $mimeType, $description, $imageData)
     {
       //Create a new Image model and populate it.
