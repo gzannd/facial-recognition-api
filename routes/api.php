@@ -18,6 +18,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+//QR code 
+Route::get("system/qr/config", "App\Http\Controllers\QRCodeController@systemConfig");
+
 //System status
 Route::get('system/status', "App\Http\Controllers\SystemStatusController@getCurrentSystemStatus");
 

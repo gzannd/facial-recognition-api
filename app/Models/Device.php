@@ -35,3 +35,4 @@ class Device extends Model
         return $this->hasMany('App\Models\EventDataType');
     }
 }
+?>
