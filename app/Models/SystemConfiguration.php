@@ -7,9 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SystemConfiguration extends Model
 {
-    public $ipAddress; 
-    public $port; 
-    public $apiKey; 
+
 }
 
 ?>

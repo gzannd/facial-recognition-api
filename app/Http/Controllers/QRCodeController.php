@@ -21,6 +21,7 @@ class QRCodeController extends Controller
         QRCodeService $qrService)
       {
           $this->configuration = $systemConfigurationService->getSystemConfiguration();
+          $this->configuration->type = "SystemConfiguration";
           $this->qrService = $qrService;
           $this->eventLogService = $eventLogService;
       }
@@ -29,13 +30,7 @@ class QRCodeController extends Controller
     {
         echo($this->configuration);
         $this->qrService->generateQRCode($this->configuration);
-    }
 
-    public function test() 
-    {
-        $this->eventLogService->LogApplicationEvent(LogLevel::Debug, "Attempting to generate QR code");
-        $this->qrService->generateQRCode();
-
-        return response()->json($result, 200);
+        return response()->json("OK", 200);
     }
 }

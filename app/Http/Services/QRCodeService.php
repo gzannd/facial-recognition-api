@@ -18,11 +18,9 @@ class QRCodeService {
         $slug = dechex( microtime(true) * 1000 ) . bin2hex( random_bytes(8) );
         $target = dirname(dirname(dirname(__DIR__)))."/storage/app/qr/auth/";
 
-        $filePath = $target . 'output-qr-code-' . $slug . '.png';
+        $filePath = $target . 'app-config-qr-code-' . $slug . '.png';
 
-        if (!file_exists($filePath)) {
-            QRcode::png($jsonData, $filePath);
-        }
+        QRcode::png($jsonData, $filePath);
     }
 }
 ?>

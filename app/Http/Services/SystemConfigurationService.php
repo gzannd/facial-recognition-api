@@ -3,6 +3,7 @@ namespace App\Http\Services;
 use App\Http\Services\EventLogService;
 use App\Models\LogLevel;
 use App\Models\SystemConfiguration; 
+use DateTime;
 
 class SystemConfigurationService {
     public function __construct(EventLogService $eventLogService) 
@@ -12,15 +13,7 @@ class SystemConfigurationService {
     
     private function getServerIP() 
     {
-        $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
-        $res = socket_connect($sock, '8.8.8.8', 53);
-        // You might want error checking code here based on the value of $res
-        socket_getsockname($sock, $addr);
-        socket_shutdown($sock);
-        socket_close($sock);
-
-        echo $addr;
-        return $addr;
+        return "192.168.0.141";
     }
 
     private function getServerPort()
@@ -36,9 +29,12 @@ class SystemConfigurationService {
     public function getSystemConfiguration()
     {
         $config = new SystemConfiguration(); 
+
         $config->serverIP = $this->getServerIp();
         $config->port = $this->getServerPort();
         $config->apiKey = $this->getAPIKey();
+        $config->version = "0.01 alpha";
+        $config->expiration = date("Y-m-d H:i:s", strtotime('+1 hours'));
 
         return $config;
     }
