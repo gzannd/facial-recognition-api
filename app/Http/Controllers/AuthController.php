@@ -6,23 +6,84 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
-use App\Http\Services\JWTValidationService;
+use App\Interfaces\IJwtService;
+use App\Http\Services\EventLogService;
+use App\Models\LogLevel;
 
 class AuthController extends Controller
 {
 
-    public function __construct()
+    public function __construct(IJwtService $jwtService, EventLogService $logService)
     {
-        $this->middleware('auth:api', ['except' => ['login','register']]);
+        $this->middleware('auth:api', ['except' => ['login','register', 'validateExternalJwt']]);
+        $this->logService = $logService;
+        $this->jwtService = $jwtService;
     }
 
-    public function validateExternalJwt(Request $request)
+
+
+    public function createUserFromJwt(Request $request)
     {
         //The JWT should be included in the request body as a base64 encoded string. 
-        $validationService = new JwtValidationService(); 
-        $claims = $validationService->ValidateJwt($request->jwt, $signer, $secretKey);
+        $jwt = $request->input('jwt');
 
+        if($jwt != null)
+        {
+            //The signer and secret key are stored in .env. 
+            $signer = $_ENV["JWT_ALGO"];
+            $secretKey = $_ENV["JWT_SECRET"];
 
+            try 
+            {
+                $claims = $jwtService->ValidateJwt($jwt, $signer, $secretKey);
+            }
+            catch(Exception $exception)
+            {
+                //Something went wrong when creating or validating the JWT.
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'An error occurred when attempting to create the user.',
+                ], 500);
+            }
+
+            if($claims != null)
+            {
+                //Attempt to create a user from the JWT. 
+                $result = $this->createUserFromClaims($claims, "foobar");
+
+                if($result['user'] != null && $result['token'] != null)
+                {
+                    //User was successfully created. Return the token.
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'User created successfully',
+                        'user' => $user,
+                        'authorisation' => [
+                            'token' => $token,
+                            'type' => 'bearer',
+                        ]
+                    ]);
+                }
+                else 
+                {
+                    //Something went wrong. Retun an error.
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'An error occurred when attempting to create the user.',
+                    ], 500);
+                }
+            }
+        }
+        else 
+        {
+            //JWT is missing.
+            return response()->json([
+                'status' => 'badrequest',
+                'message' => 'JWT is required',
+            ], 400);
+        }
+
+        
     }
 
     public function login(Request $request)
@@ -53,6 +114,24 @@ class AuthController extends Controller
 
     }
 
+
+    private function createUserFromClaims($claims, $password)
+    {
+        $user = User::create([
+            'name' => $claims['FirstName'].' '.$claims['LastName'],
+            'email' => $claims['Email'],
+            'firstName' => $claims['FirstName'],
+            'lastName' => $claims['LastName'],
+            'primaryPhone' => $claims['PrimaryPhone'],
+            'role' => $claims['Role'],
+            'password' => Hash::make("foobar"),
+        ]);
+
+        $token = Auth::login($user);
+
+        return ['user' => $user, 'token' => $token];
+    }
+
     public function register(Request $request){
         
         try {
@@ -65,22 +144,6 @@ class AuthController extends Controller
             return $th->validator->errors();
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        $token = Auth::login($user);
-        return response()->json([
-            'status' => 'success',
-            'message' => 'User created successfully',
-            'user' => $user,
-            'authorisation' => [
-                'token' => $token,
-                'type' => 'bearer',
-            ]
-        ]);
     }
 
     public function logout()

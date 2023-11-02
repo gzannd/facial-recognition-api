@@ -26,7 +26,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('logout', 'logout');
     Route::post('refresh', 'refresh');
     Route::post('change-password', 'change_password');
-    Route::post('validate/website/jwt', "validateExternalJwt");
+    Route::post('register/jwt', "createUserFromJwt");
 });
 
 //QR code 

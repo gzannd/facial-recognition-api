@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind('App\Interfaces\IPushNotificationService', 'App\Http\Services\LarafirebasePushNotificationService');
         $this->app->bind('App\Interfaces\IFacialRecognitionService', 'App\Http\Services\CompreFaceFacialRecognitionService');
         $this->app->bind('App\Interfaces\IDeviceService', 'App\Http\Services\DeviceService');
+        $this->app->bind('App\Interfaces\IJwtService', 'App\Http\Services\JwtService');
     }
 
     /**
