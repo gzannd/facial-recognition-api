@@ -50,6 +50,7 @@
       return $jwt;
     }
 
+    //Given a base64 encoded JWT, a signer, and a secret key, validates the JWT
     public function ValidateJwt($jwt, $signer, $secretKey)
     {
         $claims = null;

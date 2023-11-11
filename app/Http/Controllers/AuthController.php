@@ -24,6 +24,8 @@ class AuthController extends Controller
 
     public function createUserFromJwt(Request $request)
     {
+        $this->logService->LogApplicationEvent(LogLevel::Info, "Validate claims from external JWT", $request);
+
         //The JWT should be included in the request body as a base64 encoded string. 
         $jwt = $request->input('jwt');
 
@@ -39,6 +41,8 @@ class AuthController extends Controller
             }
             catch(Exception $exception)
             {
+                $this->logService->LogApplicationEvent(LogLevel::Error, "Error occurred while attempting to create user from JWT", $exception);
+
                 //Something went wrong when creating or validating the JWT.
                 return response()->json([
                     'status' => 'error',
@@ -48,6 +52,8 @@ class AuthController extends Controller
 
             if($claims != null)
             {
+                $this->logService->LogApplicationEvent(LogLevel::Info, "JWT validated. Attempting to create user.", $request);
+
                 //Attempt to create a user from the JWT. 
                 $result = $this->createUserFromClaims($claims, $this->passwordService->GenerateBasicPassword(16));
 
@@ -66,6 +72,8 @@ class AuthController extends Controller
                 }
                 else 
                 {
+                    $this->logService->LogApplicationEvent(LogLevel::Error, "Unable to create user from JWT.");
+
                     //Something went wrong. Retun an error.
                     return response()->json([
                         'status' => 'error',
@@ -76,6 +84,8 @@ class AuthController extends Controller
         }
         else 
         {
+            $this->logService->LogApplicationEvent(LogLevel::Error, "JWT was not supplied in request.");
+
             //JWT is missing.
             return response()->json([
                 'status' => 'badrequest',
@@ -134,11 +144,14 @@ class AuthController extends Controller
         }
         catch(QueryException $ex)
         {
-            
+            $this->logService->LogApplicationEvent(LogLevel::Error, "Database Error creating user from claims.", $ex);
+
             return null;
         }
         catch(Exception $ex)
         {
+            $this->logService->LogApplicationEvent(LogLevel::Error, "Error creating user from claims.", $ex);
+
             return null;
         }
     }
