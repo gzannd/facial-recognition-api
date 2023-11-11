@@ -4,7 +4,7 @@ namespace App\Interfaces;
 interface IJwtService
 {
   public function GenerateJwt($secretKey, $signer, $user);
-  public function ValidateJwt($jwt, $signer, $secretKey);
+  public function ValidateExternalJwt($jwt, $signer, $secretKey);
 }
 
 ?>

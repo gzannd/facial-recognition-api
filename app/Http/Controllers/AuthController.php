@@ -7,20 +7,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Interfaces\IJwtService;
+use App\Interfaces\IPasswordService;
 use App\Http\Services\EventLogService;
 use App\Models\LogLevel;
-
+use Illuminate\Database\QueryException;
 class AuthController extends Controller
 {
 
-    public function __construct(IJwtService $jwtService, EventLogService $logService)
+    public function __construct(IJwtService $jwtService, IPasswordService $passwordService, EventLogService $logService)
     {
-        $this->middleware('auth:api', ['except' => ['login','register', 'validateExternalJwt']]);
+        $this->middleware('auth:api', ['except' => ['login','register', 'createUserFromJwt']]);
         $this->logService = $logService;
         $this->jwtService = $jwtService;
+        $this->passwordService = $passwordService;
     }
-
-
 
     public function createUserFromJwt(Request $request)
     {
@@ -35,7 +35,7 @@ class AuthController extends Controller
 
             try 
             {
-                $claims = $jwtService->ValidateJwt($jwt, $signer, $secretKey);
+                $claims = $this->jwtService->ValidateJwt($jwt, $signer, $secretKey);
             }
             catch(Exception $exception)
             {
@@ -49,17 +49,17 @@ class AuthController extends Controller
             if($claims != null)
             {
                 //Attempt to create a user from the JWT. 
-                $result = $this->createUserFromClaims($claims, "foobar");
+                $result = $this->createUserFromClaims($claims, $this->passwordService->GenerateBasicPassword(16));
 
-                if($result['user'] != null && $result['token'] != null)
+                if($result != null && $result['user'] != null && $result['token'] != null)
                 {
                     //User was successfully created. Return the token.
                     return response()->json([
                         'status' => 'success',
                         'message' => 'User created successfully',
-                        'user' => $user,
-                        'authorisation' => [
-                            'token' => $token,
+                        'user' => $result['user'],
+                        'authorization' => [
+                            'token' => $result['token'],
                             'type' => 'bearer',
                         ]
                     ]);
@@ -117,19 +117,30 @@ class AuthController extends Controller
 
     private function createUserFromClaims($claims, $password)
     {
-        $user = User::create([
-            'name' => $claims['FirstName'].' '.$claims['LastName'],
-            'email' => $claims['Email'],
-            'firstName' => $claims['FirstName'],
-            'lastName' => $claims['LastName'],
-            'primaryPhone' => $claims['PrimaryPhone'],
-            'role' => $claims['Role'],
-            'password' => Hash::make("foobar"),
-        ]);
+        try {
+            $user = User::create([
+                'name' => $claims['FirstName'].' '.$claims['LastName'],
+                'email' => $claims['Email'],
+                'firstName' => $claims['FirstName'],
+                'lastName' => $claims['LastName'],
+                'primaryPhone' => $claims['PrimaryPhone'],
+                'role' => $claims['Role'],
+                'password' => Hash::make("foobar"),
+            ]);
 
-        $token = Auth::login($user);
+            $token = Auth::login($user);
 
-        return ['user' => $user, 'token' => $token];
+            return ['user' => $user, 'token' => $token];
+        }
+        catch(QueryException $ex)
+        {
+            
+            return null;
+        }
+        catch(Exception $ex)
+        {
+            return null;
+        }
     }
 
     public function register(Request $request){

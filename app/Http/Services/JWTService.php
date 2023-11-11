@@ -19,6 +19,22 @@
       $this->logService = $logService;
     }
 
+    public function ValidateExternalJwt($jwt, $signer, $secretKey)
+    {   
+        $claims = [];
+
+        try 
+        {
+            $claims = $this->jwtService->ValidateJwt($jwt, $signer, $secretKey);
+        }
+        catch(Exception $exception)
+        {
+           
+        }
+
+        return $claims;
+    }
+
     public function GenerateJwt($secretKey, $signer, $user)
     {
       $jwt = null;
@@ -52,7 +68,16 @@
 
             // Parse the token
             $parser = new Parser($signer, $validator);
-            $claims = $parser->parse($jwt);
+
+            try 
+            {
+              $claims = $parser->parse($jwt);
+            }
+            catch(Exception $exception)
+            {
+              //Unable to validate or create claims. 
+              $this->logService->LogApplicationEvent(LogLevel::Error, "An exception occurred while attempting to create or validate an external JWT: ".$exception->getMessage(), $jwt);
+            }
         }
         else 
         {

@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 use App\Interfaces;
+use App\Http\Services\PasswordService;
 use Illuminate\Support\ServiceProvider;
+use App\Http\Services\EventLogService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind('App\Interfaces\IFacialRecognitionService', 'App\Http\Services\CompreFaceFacialRecognitionService');
         $this->app->bind('App\Interfaces\IDeviceService', 'App\Http\Services\DeviceService');
         $this->app->bind('App\Interfaces\IJwtService', 'App\Http\Services\JwtService');
+        $this->app->bind('App\Interfaces\IPasswordService', function() {
+            return new PasswordService($this->app->makeWith(EventLogService::class), $_ENV['MIN_PASSWORD_LENGTH'], $_ENV['MAX_PASSWORD_LENGTH']);
+        });
     }
 
     /**
