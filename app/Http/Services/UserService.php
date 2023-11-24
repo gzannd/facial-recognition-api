@@ -7,6 +7,7 @@ use App\Interfaces\IJwtService;
 use App\Interfaces\IPasswordService;
 use App\Http\Services\EventLogService;
 use App\Models\LogLevel;
+use App\Models\UserClaim;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,11 @@ class UserService implements IUserService
     public function GetUserCount() 
     {
         return User::count();
+    }
+
+    public function GetUsers()
+    {
+        return User::all();
     }
 
     //Given a JWT, validate it and, if valid, create a new user. 
@@ -77,16 +83,104 @@ class UserService implements IUserService
         }
         else 
         {
-            $this->logService->LogApplicationEvent(LogLevel::Error, "JWT was not supplied in request.");
+            $this->logService->LogApplicationEvent(LogLevel::Error, "JWT was not supplied.");
 
-            //JWT is missing.
-            return response()->json([
-                'status' => 'badrequest',
-                'message' => 'JWT is required',
-            ], 400);
+            return null; 
         }        
     }
 
+    //Deletes all claims for the specified user. 
+    public function ClearUserClaims($userId)
+    {
+        UserClaim::where('userId', $userId)->delete();
+    }
+
+    public function RemoveUserClaims($userId, $claimNames)
+    {
+        foreach($claimNames as $claimName)
+        {
+            UserClaim::where('userId', $userId )
+            ->where('claim', $claimName)
+            ->delete();
+        }
+    }
+
+    public function UpdateUser($user)
+    {
+        $existingUser = User::where('id', $user->id).first();
+
+        if($existingUser != null)
+        {
+            $existingUser->name = $user->name;
+            $existingUser->firstName = $user->firstName;
+            $existingUser->lastName = $user->lastName;
+            $existingUser->primaryPhone = $user->primaryPhone;
+            $existingUser->role = $user->role;
+
+            $existingUser->save();
+
+            $this->SetUserClaims($user->id, $user->claims);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    //Sets claims for the specified user. If a claim doesn't exist then it will be created. 
+    //If the claim exists then it will be modified. 
+    //TODO: Set up a list of claim names to validate against.
+    public function SetUserClaims($userId, $claims)
+    {
+        //Retrieve all of the claims for the user. 
+        $userClaims = UserClaim::where('userId', $userId);
+
+        //Map the claims to an associative array keyed by claim name.
+        $mappedClaims = array_column($userClaims, 'claim');
+        
+        //Update any existing claims, and insert any new ones.
+        foreach($claims as $userClaim)
+        {
+            $index = array_seach($userClaim->claim, $mappedClaims);
+            if($index == false)
+            {
+                $claim = $mappedClaims[$index];
+
+                $claim->valid_begin = $userClaim->valid_begin;
+                $claim->valid_end = $userClaim->valid_end;
+
+                $claim->save();
+            }
+            else 
+            {
+                //Insert the claim.
+                $userClaim->userId = $userId;
+                UserClaim::create([
+                    'userId' => $userId, 
+                    'claim' => $userClaim->claim, 
+                    'valid_begin' => $userClaim->valid_begin, 
+                    'valid_end' => $userClaim->valid->end]);
+            }
+        }
+    }
+
+    public function GetUserClaims($userId)
+    {
+        return UserClaim::where('userId', $userId);
+    }
+
+    public function GetUserById($userId)
+    {
+        $user = Users::where('id', $userId)->first();
+
+        if($user != null)
+        {
+            $claims = UserClaims::where('userId', $userId);
+            $user->claims = $claims;
+        }
+
+        return $user;
+    }
     public function CreateUserFromClaims($claims, $password)
     {
         try {
@@ -117,6 +211,5 @@ class UserService implements IUserService
             return null;
         }
     }
-
 }
 ?>
