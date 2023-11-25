@@ -9,4 +9,14 @@ class UserClaim extends Model
 {
     use HasFactory;
     protected $table = "user_claim";
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $hidden = [
+        'userId'
+    ];
+
 }

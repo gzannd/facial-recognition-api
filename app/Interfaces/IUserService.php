@@ -7,7 +7,7 @@ interface IUserService {
     public function GetUserCount();
     public function GetUsers();
     public function ClearUserClaims($userId);
-    public function RemoveUserClaims($userId);
+    public function RemoveUserClaims($userId, $claimNames);
     public function SetUserClaims($userId, $claims);
     public function GetUserClaims($userId);
     public function GetUserById($userId);

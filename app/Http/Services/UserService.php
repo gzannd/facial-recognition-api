@@ -148,7 +148,7 @@ class UserService implements IUserService
 
                 $claim->valid_begin = $userClaim->valid_begin;
                 $claim->valid_end = $userClaim->valid_end;
-
+                $claim->data = $userClaim->data;
                 $claim->save();
             }
             else 
@@ -158,6 +158,7 @@ class UserService implements IUserService
                 UserClaim::create([
                     'userId' => $userId, 
                     'claim' => $userClaim->claim, 
+                    'data' => $userClaim->data,
                     'valid_begin' => $userClaim->valid_begin, 
                     'valid_end' => $userClaim->valid->end]);
             }

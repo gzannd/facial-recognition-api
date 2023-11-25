@@ -23,6 +23,11 @@ class AuthController extends Controller
         $this->userService = $userService;
     }
 
+    public function listUsers(Request $request)
+    {
+        return response()->json($this->userService->GetUsers());
+    }
+
     public function createUserFromJwt(Request $request)
     {
         $this->logService->LogApplicationEvent(LogLevel::Info, "Validate claims from external JWT", $request);
