@@ -11,21 +11,59 @@ use App\Http\Services\EventLogService;
 use App\Http\Services\UserService;
 use App\Models\LogLevel;
 use Illuminate\Database\QueryException;
+use App\Http\Services\AuthenticationService;
+
 class AuthController extends Controller
 {
 
-    public function __construct(UserService $userService, EventLogService $logService, IJWTService $jwtService, IPasswordService $passwordService)
+    public function __construct(UserService $userService, AuthenticationService $authService, EventLogService $logService, IJWTService $jwtService, IPasswordService $passwordService)
     {
         $this->middleware('auth:api', ['except' => ['login','register', 'createUserFromJwt']]);
         $this->logService = $logService;
         $this->jwtService = $jwtService;
         $this->passwordService = $passwordService;
         $this->userService = $userService;
+        $this->authService = $authService;
     }
 
     public function listUsers(Request $request)
     {
         return response()->json($this->userService->GetUsers());
+    }
+
+    public function updateUserInfo(Request $request)
+    {
+        //The request should contain a User model. The route should contain a valid ID. 
+        $input = $request->all();
+
+        if($input != null)
+        {
+            $user = new User();
+            $user->fill($input);
+            $user->id = $request->route("id");
+
+            $authUser = Auth::user();
+
+            if($this->authService->CheckCanUpdateUser($authUser, $input))
+            {
+                $result = $userService->UpdateUser($input);
+            }
+            else 
+            {
+                return response()->json([
+                    'status' => 'unauthorized',
+                    'message' => 'You are not allowed to perform this action.',
+                ], 401);
+            }
+            
+        }
+        else 
+        {
+            return response()->json([
+                'status' => 'badrequest',
+                'message' => 'User info is requred.',
+            ], 400);
+        }
     }
 
     public function createUserFromJwt(Request $request)

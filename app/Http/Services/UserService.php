@@ -115,11 +115,8 @@ class UserService implements IUserService
             $existingUser->firstName = $user->firstName;
             $existingUser->lastName = $user->lastName;
             $existingUser->primaryPhone = $user->primaryPhone;
-            $existingUser->role = $user->role;
 
             $existingUser->save();
-
-            $this->SetUserClaims($user->id, $user->claims);
 
             return true;
         }
