@@ -26,6 +26,13 @@ class PasswordService implements IPasswordService {
  
     }
 
+    public function PasswordMeetsSecurityRequirements($password)
+    {
+        return $password != null
+         && strlen($password) >= $this->minPasswordLength 
+         && strlen($password) <= $this->maxPasswordLength;
+    }
+
     public function GenerateBasicPassword($length) 
     {
         if ($length < $this->minPasswordLength || $length > $this->maxPasswordLength) {

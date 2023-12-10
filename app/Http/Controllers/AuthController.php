@@ -39,7 +39,7 @@ class AuthController extends Controller
         if($input != null)
         {
             $user = new User();
-            $user->fill($input);
+            $user->fill($input);    
             $user->id = $request->route("id");
 
             $authUser = Auth::user();
@@ -73,43 +73,10 @@ class AuthController extends Controller
         //The JWT should be included in the request body as a base64 encoded string. 
         $jwt = $request->input('jwt');
 
-        if($jwt != null)
-        {
-            try 
-            {
-                $user = Auth::user();
-                $result = $this->userService->CreateUserFromJwt($jwt, $user);
-
-                if($result != null && $result['user'] != null && $result['token'] != null)
-                {
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'User created successfully',
-                        'user' => $result['user'],
-                        'authorization' => [
-                            'token' => $result['token'],
-                            'type' => 'bearer',
-                        ]
-                    ]);
-                }
-                else 
-                {
-                    //Something went wrong when creating the user. 
-                    return response()->json([
-                        'status' => 'internalservererror',
-                        'message' => 'Unable to create create a new user.',
-                    ], 500);
-                }   
-            }
-            catch(Exception $ex)
-            {
-                return response()->json([
-                    'status' => 'internalservererror',
-                    'message' => 'An error occurred while attempting to create a new user.',
-                ], 500);
-            }
-        }
-        else 
+        //Password must be included.
+        $password = $request->input('password');
+        
+        if($jwt == null)
         {
             $this->logService->LogApplicationEvent(LogLevel::Error, "JWT was not supplied in request.");
 
@@ -118,7 +85,49 @@ class AuthController extends Controller
                 'status' => 'badrequest',
                 'message' => 'JWT is required',
             ], 400);
-        }        
+        }
+
+        if($password == null)
+        {
+            $this->logService->LogApplicationEvent(LogLevel::Error, "Password was not supplied in request.");
+
+            //JWT is missing.
+            return response()->json([
+                'status' => 'badrequest',
+                'message' => 'Password is required',
+            ], 400);
+        }
+
+        try 
+        {
+            $user = Auth::user();
+            $result = $this->userService->CreateUserFromJwt($jwt, $password, $user);
+
+            if($result != null)
+            {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'User created successfully',
+                    'user' => $result
+                    ]);
+            }
+            else 
+            {
+                //Something went wrong when creating the user. 
+                return response()->json([
+                    'status' => 'internalservererror',
+                    'message' => 'Unable to create create a new user.',
+                ], 500);
+            }   
+        }
+        catch(Exception $ex)
+        {
+            return response()->json([
+                'status' => 'internalservererror',
+                'message' => 'An error occurred while attempting to create a new user.',
+            ], 500);
+        }
+       
     }
 
     public function login(Request $request)
@@ -127,9 +136,11 @@ class AuthController extends Controller
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
+
         $credentials = $request->only('email', 'password');
 
         $token = Auth::attempt($credentials);
+
         if (!$token) {
             return response()->json([
                 'status' => 'error',
@@ -146,8 +157,42 @@ class AuthController extends Controller
                     'type' => 'bearer',
                 ]
             ]);
-
     }    
+
+    public function logout()
+    {
+        try {
+            Auth::logout();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Successfully logged out',
+            ]);
+        }
+        catch(\Exception $ex)
+        {
+            $this->logService->LogApplicationEvent(LogLevel::Error, "An error occurred while attempting to log out user ID ". Auth::user()->id, $ex->message);
+
+            return response()->json([
+                'status' => 'errinternalservererroror',
+                'message' => 'unable to log out. Please try again later.'
+            ]);
+        }
+    }
+
+    public function refresh()
+    {
+        return response()->json([
+            'status' => 'success',
+            'user' => Auth::user(),
+            'authorisation' => [
+                'token' => Auth::refresh(),
+                'type' => 'bearer',
+            ]
+        ]);
+    }
+
+
 
     public function register(Request $request){
         
@@ -161,27 +206,6 @@ class AuthController extends Controller
             return $th->validator->errors();
         }
 
-    }
-
-    public function logout()
-    {
-        Auth::logout();
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Successfully logged out',
-        ]);
-    }
-
-    public function refresh()
-    {
-        return response()->json([
-            'status' => 'success',
-            'user' => Auth::user(),
-            'authorisation' => [
-                'token' => Auth::refresh(),
-                'type' => 'bearer',
-            ]
-        ]);
     }
 
     public function change_password(Request $request)

@@ -10,6 +10,7 @@ use App\Models\LogLevel;
 use App\Models\UserClaim;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class UserService implements IUserService
@@ -20,6 +21,9 @@ class UserService implements IUserService
         $this->jwtService = $jwtService;
         $this->passwordService = $passwordService;
     }
+
+    const DEFAULT_CLAIMS = ["Email", "exp", "aud", "FirstName", "iat", "iss", "LastName", "PrimaryPhone", "sub"];
+
 
     public function GetUserCount() 
     {
@@ -36,11 +40,11 @@ class UserService implements IUserService
     //If this is the first user created in the system then pass 0 into $createUserId; the resulting user will 
     //be given the ROOT_USER claim. Otherwise, this function will check to see if the user ID has the 
     //CREATE_USER claim before creating the user.  
-    public function CreateUserFromJwt($jwt, $createUserId)
+    public function CreateUserFromJwt($externalJwt, $password, $createUserId)
     {
-        $this->logService->LogApplicationEvent(LogLevel::Info, "Validate claims from external JWT", $jwt);
+        $this->logService->LogApplicationEvent(LogLevel::Info, "Validate claims from external JWT", $externalJwt);
 
-        if($jwt != null)
+        if($externalJwt != null)
         {
             //The signer and secret key are stored in .env. 
             $signer = $_ENV["JWT_ALGO"];
@@ -48,7 +52,7 @@ class UserService implements IUserService
 
             try 
             {
-                $claims = $this->jwtService->ValidateJwt($jwt, $signer, $secretKey);
+                $claims = $this->jwtService->ValidateJwt($externalJwt, $signer, $secretKey);
             }
             catch(Exception $exception)
             {
@@ -59,22 +63,42 @@ class UserService implements IUserService
 
             if($claims != null)
             {
-                $this->logService->LogApplicationEvent(LogLevel::Info, "JWT validated. Attempting to create user.");
-                
-                //If this is the first user, give the user the ROOT_USER role.  
-                $count = $this->getUserCount();
-
-                if($count == 0)
+                //New users must specify a password
+                if($password != null)
                 {
-                   $claims['Role'] = "ROOT_USER";
+                    if($this->passwordService->PasswordMeetsSecurityRequirements($password) == true)
+                    {
+                        $this->logService->LogApplicationEvent(LogLevel::Info, "JWT validated. Attempting to create user.");
+                        
+                        //If this is the first user, give the user the ROOT_USER role.  
+                        $count = $this->getUserCount();
+
+                        if($count == 0)
+                        {
+                            $claims['Role'] = "ROOT_USER";
+                        }
+
+                        //Attempt to create a user from the JWT. 
+                        $result = $this->createUserFromClaims($claims, $password);
+
+                        return $result;
+                    }
+                    else 
+                    {
+                        //Password doesn't meet security requirements. 
+                        $this->logService->LogApplicationEvent(LogLevel::Error, "Password does not meet security requirements.");
+                    
+                        return null;
+                    }
                 }
-
-                //Attempt to create a user from the JWT. 
-                $result = $this->createUserFromClaims($claims, $this->passwordService->GenerateBasicPassword(16));
-
-                return $result;
+                else 
+                {
+                    $this->logService->LogApplicationEvent(LogLevel::Error, "Password is required.");
+                    
+                    return null;
+                }
             }
-            else 
+            else
             {
                 $this->logService->LogApplicationEvent(LogLevel::Error, "Unable to retrieve claims from the JWT.");
                 
@@ -181,33 +205,53 @@ class UserService implements IUserService
     }
     public function CreateUserFromClaims($claims, $password)
     {
-        try {
+        $user = null;
+        
+        
+        DB::beginTransaction();
+
+        try {           
             $user = User::create([
                 'name' => $claims['FirstName'].' '.$claims['LastName'],
                 'email' => $claims['Email'],
                 'firstName' => $claims['FirstName'],
                 'lastName' => $claims['LastName'],
                 'primaryPhone' => $claims['PrimaryPhone'],
-                'role' => $claims['Role'],
                 'password' => Hash::make($password),
             ]);
 
-            $token = Auth::login($user);
-
-            return ['user' => $user, 'token' => $token];
+            if($user != null)
+            {
+                foreach($claims as $key => $claim)
+                {
+                    if(in_array($key, UserService::DEFAULT_CLAIMS) == false)
+                    {
+                        UserClaim::create([
+                            'userId' => $user->id, 
+                            'claim' => $key,
+                            'data' => $claim
+                        ]);
+                    }
+                }
+            }   
         }
         catch(QueryException $ex)
         {
+            DB::rollback();
             $this->logService->LogApplicationEvent(LogLevel::Error, "Database Error creating user from claims.", $ex);
 
             return null;
         }
         catch(Exception $ex)
         {
+            DB::rollback();
             $this->logService->LogApplicationEvent(LogLevel::Error, "Error creating user from claims.", $ex);
 
             return null;
         }
+
+        DB::commit();
+        return User::find($user->id);
     }
 }
 ?>

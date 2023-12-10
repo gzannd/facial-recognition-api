@@ -2,7 +2,7 @@
 namespace App\Interfaces;
 
 interface IUserService {
-    public function CreateUserFromJwt($jwt, $createUserId);
+    public function CreateUserFromJwt($jwt, $password, $user);
     public function CreateUserFromClaims($claims, $password);
     public function GetUserCount();
     public function GetUsers();

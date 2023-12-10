@@ -10,6 +10,11 @@ class UserClaim extends Model
     use HasFactory;
     protected $table = "user_claim";
 
+    public $timestamps = false;
+
+    protected $fillable = [
+        'userId', 'claim', 'data'];
+
     /**
      * The attributes that should be hidden for serialization.
      *
