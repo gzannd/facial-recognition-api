@@ -2,6 +2,7 @@
 
 namespace App\Http\Services;
 use App\Models\User;
+use App\Models\UserCreationError;
 use App\Interfaces\IUserService;
 use App\Interfaces\IJwtService;
 use App\Interfaces\IPasswordService;
@@ -40,6 +41,8 @@ class UserService implements IUserService
     //If this is the first user created in the system then pass 0 into $createUserId; the resulting user will 
     //be given the ROOT_USER claim. Otherwise, this function will check to see if the user ID has the 
     //CREATE_USER claim before creating the user.  
+
+    //If the creation process fails, the method returns a result containing the reason for the failure. 
     public function CreateUserFromJwt($externalJwt, $password, $createUserId)
     {
         $this->logService->LogApplicationEvent(LogLevel::Info, "Validate claims from external JWT", $externalJwt);
@@ -85,31 +88,39 @@ class UserService implements IUserService
                     }
                     else 
                     {
-                        //Password doesn't meet security requirements. 
-                        $this->logService->LogApplicationEvent(LogLevel::Error, "Password does not meet security requirements.");
-                    
-                        return null;
+                        //Password doesn't meet security requirements.
+                        $errorMessage = "Password does not meet security requirements.";
+
+                        $this->logService->LogApplicationEvent(LogLevel::Error, $errorMessage);
+                        
+                        return new UserCreationError($errorMessage, 100);
                     }
                 }
                 else 
                 {
-                    $this->logService->LogApplicationEvent(LogLevel::Error, "Password is required.");
+                    //Password is required.
+                    $errorMessage = "Password is required.";
+                    $this->logService->LogApplicationEvent(LogLevel::Error, $errorMessage);
                     
-                    return null;
+                    return new UserCreationError($errorMessage, 101);
                 }
             }
             else
             {
-                $this->logService->LogApplicationEvent(LogLevel::Error, "Unable to retrieve claims from the JWT.");
+                //Claims are missing from the JWT.
+                $errorMessage = "Unable to retrieve claims from the JWT.";
+                $this->logService->LogApplicationEvent(LogLevel::Error, $errorMessage);
                 
-                return null;
+                return new UserCreationError($errorMessage, 200);
             }
         }
         else 
         {
-            $this->logService->LogApplicationEvent(LogLevel::Error, "JWT was not supplied.");
+            //JWT was not supplied in the request. 
+            $errorMessage = "JWT was not supplied.";
+            $this->logService->LogApplicationEvent(LogLevel::Error, $errorMessage);
 
-            return null; 
+            return new UserCreationError($errorMessage, 201); 
         }        
     }
 

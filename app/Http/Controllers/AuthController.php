@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\UserCreationError;
 use App\Interfaces\IJwtService;
 use App\Interfaces\IPasswordService;
 use App\Http\Services\EventLogService;
@@ -103,7 +104,7 @@ class AuthController extends Controller
             $user = Auth::user();
             $result = $this->userService->CreateUserFromJwt($jwt, $password, $user);
 
-            if($result != null)
+            if($result instanceof User)
             {
                 return response()->json([
                     'status' => 'success',
@@ -111,14 +112,33 @@ class AuthController extends Controller
                     'user' => $result
                     ]);
             }
-            else 
+            else if($result instanceof UserCreationError) 
             {
                 //Something went wrong when creating the user. 
+                $message = "";
+
+                if($result->errorCode < 200){
+                    //Errors with code < 200 may safely be reported to the caller.
+                    $message = $result->reason;
+                }
+                else {
+                    $message = "Unable to create a new user.";
+                }
+
+                //The majority of the issues that may happen here are bad input so return a 400.
+                return response()->json([
+                    'status' => 'badrequest',
+                    'message' => $message,
+                    'errorCode' => $result->errorCode
+                ], 400);
+            }   
+            else {
+                //Something really went wrong here.
                 return response()->json([
                     'status' => 'internalservererror',
                     'message' => 'Unable to create create a new user.',
                 ], 500);
-            }   
+            }
         }
         catch(Exception $ex)
         {
