@@ -13,7 +13,8 @@ class SystemConfigurationService {
     
     private function getServerIP() 
     {
-        return "192.168.0.141";
+        return getHostByName(getHostName());
+        //return "192.168.0.141";
     }
 
     private function getServerPort()
@@ -35,7 +36,7 @@ class SystemConfigurationService {
         $config->apiKey = $this->getAPIKey();
         $config->version = "0.01 alpha";
         $config->expiration = date("Y-m-d H:i:s", strtotime('+1 hours'));
-
+        $config->ipAddress = $this->getServerIP();
         return $config;
     }
 }

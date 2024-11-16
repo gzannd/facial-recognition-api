@@ -29,7 +29,7 @@
         }
         catch(Exception $exception)
         {
-           
+          $this->logService->LogApplicationEvent(LogLevel::Error, "An exception occurred while attempting to create or validate an external JWT: ".$exception->getMessage(), $jwt);
         }
 
         return $claims;
@@ -45,6 +45,10 @@
         $generator = new Generator($signer);
 
         $jwt = $generator->generate((array)$user);
+      } 
+      else 
+      {
+        $this->logService->LogApplicationEvent(LogLevel::Error, "Invalid signer ".$signer);
       }
 
       return $jwt;

@@ -74,6 +74,8 @@ class AuthController extends Controller
         //The JWT should be included in the request body as a base64 encoded string. 
         $jwt = $request->input('jwt');
 
+        $this->logService->LogApplicationEvent(LogLevel::Info, "JWT", $jwt);
+
         //Password must be included.
         $password = $request->input('password');
         
@@ -136,7 +138,7 @@ class AuthController extends Controller
                 //Something really went wrong here.
                 return response()->json([
                     'status' => 'internalservererror',
-                    'message' => 'Unable to create create a new user.',
+                    'message' => 'Unable to create a new user.',
                 ], 500);
             }
         }
@@ -194,7 +196,7 @@ class AuthController extends Controller
             $this->logService->LogApplicationEvent(LogLevel::Error, "An error occurred while attempting to log out user ID ". Auth::user()->id, $ex->message);
 
             return response()->json([
-                'status' => 'errinternalservererroror',
+                'status' => 'internalservererror',
                 'message' => 'unable to log out. Please try again later.'
             ]);
         }
